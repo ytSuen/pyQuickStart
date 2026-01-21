@@ -1,0 +1,4 @@
+# file: E:\myDevelopment\pyQuickStart\hotkey_manager.py
+# hypothesis_version: 6.150.2
+
+[0.5, '+', '.exe', 'alt', 'ctrl', 'exe', 'shift', 'win', '开始停止快捷键监听', '快捷键监听已启动', '快捷键监听未运行，无需停止', '检查进程状态时发生异常，跳过该进程']

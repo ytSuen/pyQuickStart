@@ -1,0 +1,4 @@
+# file: E:\myDevelopment\pyQuickStart\power_manager.py
+# hypothesis_version: 6.150.2
+
+[2147483648, '防休眠模式已经启用，跳过', '防休眠模式未启用，跳过']
