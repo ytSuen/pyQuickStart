@@ -220,7 +220,7 @@ class HotkeyManager:
 
         # 检查管理员权限
         if not self.is_admin():
-            msg = "需要管理员权限才能监听全局快捷键！\n请右键点击程序，选择"以管理员身份运行""
+            msg = '需要管理员权限才能监听全局快捷键！\n请右键点击程序，选择"以管理员身份运行"'
             self.logger.error(msg)
             return False, msg
 
