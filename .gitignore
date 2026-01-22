@@ -16,10 +16,19 @@ htmlcov/
 # IDE
 .vscode/
 .idea/
+.kiro/
 
 # Project
 logs/*.log
 config.json
+
+# UI Development (不推送到仓库)
+ui/
+ui_temp_*.html
+ui_temp_*.md
+
+# Shared folders (不推送到仓库)
+.shared/
 
 # OS
 .DS_Store
