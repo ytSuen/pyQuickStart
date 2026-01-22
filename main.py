@@ -2,6 +2,7 @@
 快捷键启动程序与防休眠工具
 主程序入口 - PyQt5 GUI
 """
+import os
 import sys
 import ctypes
 from PyQt5.QtWidgets import QApplication, QMessageBox
@@ -14,6 +15,19 @@ def is_admin():
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
+
+
+def hide_console_window():
+    if sys.platform != 'win32':
+        return
+    if os.environ.get('PYQS_SHOW_CONSOLE'):
+        return
+    try:
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)
+    except Exception:
+        return
 
 
 def run_as_admin():
@@ -43,6 +57,7 @@ def run_as_admin():
 def main():
     """主函数"""
     try:
+        hide_console_window()
         # 检查管理员权限
         if not is_admin():
             print("需要管理员权限，正在请求...")
@@ -54,6 +69,7 @@ def main():
                 print("警告: 未获得管理员权限，快捷键功能可能无法正常工作")
         
         app = QApplication(sys.argv)
+        app.setQuitOnLastWindowClosed(False)
         
         window = HotkeyManagerQt()
         window.show()

@@ -4,7 +4,8 @@ PyQt5 图形界面
 """
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QPushButton, QTableWidget, 
-                             QTableWidgetItem, QFileDialog, QMessageBox, QHeaderView)
+                             QTableWidgetItem, QFileDialog, QMessageBox, QHeaderView,
+                             QSystemTrayIcon, QMenu, QAction)
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QKeySequence, QIcon, QPixmap
 from hotkey_manager import HotkeyManager
@@ -122,8 +123,15 @@ class HotkeyManagerQt(QMainWindow):
             self.logger.warning(f"无法加载图标: {icon_path}")
         else:
             self.setWindowIcon(QIcon(icon_path))
+
+        self._is_quitting = False
+        self.tray_icon = None
+        self.tray_menu = None
+        self.tray_action_toggle = None
+        self.tray_action_quit = None
         
         self.init_ui()
+        self.init_tray()
         self.load_config()
         
         # 定时更新状态
@@ -143,6 +151,21 @@ class HotkeyManagerQt(QMainWindow):
             }
             QWidget#centralWidget {
                 background-color: #F8FAFC;
+            }
+            QWidget[role="panel"] {
+                background-color: rgba(255, 255, 255, 0.9);
+                border: none;
+                border-radius: 12px;
+            }
+            QWidget[role="card"] {
+                background-color: #FFFFFF;
+                border: none;
+                border-radius: 12px;
+            }
+            QWidget[role="chip"] {
+                background-color: #F8FAFC;
+                border: none;
+                border-radius: 8px;
             }
             QLabel {
                 color: #334155;
@@ -207,7 +230,7 @@ class HotkeyManagerQt(QMainWindow):
             }
             QLineEdit {
                 background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
+                border: 1px solid #E2E8F0;
                 border-radius: 8px;
                 padding: 10px 14px;
                 color: #1E293B;
@@ -224,7 +247,7 @@ class HotkeyManagerQt(QMainWindow):
             QPushButton {
                 background-color: #FFFFFF;
                 color: #475569;
-                border: 1.5px solid #E2E8F0;
+                border: 1px solid #E2E8F0;
                 border-radius: 8px;
                 padding: 10px 18px;
                 font-weight: 500;
@@ -333,7 +356,7 @@ class HotkeyManagerQt(QMainWindow):
             }
             QTableWidget {
                 background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
+                border: 1px solid #E2E8F0;
                 border-radius: 12px;
                 gridline-color: #F1F5F9;
                 color: #334155;
@@ -391,17 +414,68 @@ class HotkeyManagerQt(QMainWindow):
         widget.style().unpolish(widget)
         widget.style().polish(widget)
         widget.update()
+
+    def init_tray(self):
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        if self.windowIcon().isNull():
+            tray_icon = QSystemTrayIcon(QIcon("resources/SYT.png"), self)
+        else:
+            tray_icon = QSystemTrayIcon(self.windowIcon(), self)
+
+        tray_icon.setToolTip("快捷键启动工具")
+        tray_icon.activated.connect(self.on_tray_activated)
+
+        tray_menu = QMenu()
+        tray_action_toggle = QAction("显示窗口", self)
+        tray_action_toggle.triggered.connect(self.toggle_window_visibility)
+        tray_menu.addAction(tray_action_toggle)
+
+        tray_action_quit = QAction("退出任务", self)
+        tray_action_quit.triggered.connect(self.exit_app)
+        tray_menu.addAction(tray_action_quit)
+
+        tray_menu.aboutToShow.connect(self.update_tray_menu_text)
+
+        tray_icon.setContextMenu(tray_menu)
+        tray_icon.show()
+
+        self.tray_icon = tray_icon
+        self.tray_menu = tray_menu
+        self.tray_action_toggle = tray_action_toggle
+        self.tray_action_quit = tray_action_quit
+
+    def update_tray_menu_text(self):
+        if self.tray_action_toggle is None:
+            return
+        if self.isVisible():
+            self.tray_action_toggle.setText("隐藏窗口")
+        else:
+            self.tray_action_toggle.setText("显示窗口")
+
+    def toggle_window_visibility(self):
+        if self.isVisible():
+            self.hide()
+            return
+        self.show()
+        self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+        self.raise_()
+        self.activateWindow()
+
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.Trigger:
+            self.toggle_window_visibility()
+
+    def exit_app(self):
+        self._is_quitting = True
+        if self.tray_icon is not None:
+            self.tray_icon.hide()
+        self.close()
     
     def create_stat_card(self, title, value, bg_color, icon_color):
         """创建统计卡片"""
         card = QWidget()
-        card.setStyleSheet(f"""
-            QWidget {{
-                background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
-                border-radius: 12px;
-            }}
-        """)
+        card.setProperty("role", "card")
         card.setMinimumHeight(100)
         
         card_layout = QHBoxLayout(card)
@@ -435,6 +509,10 @@ class HotkeyManagerQt(QMainWindow):
         """)
         
         card_layout.addWidget(icon_container)
+
+        self.refresh_widget_style(card)
+        self.refresh_widget_style(title_label)
+        self.refresh_widget_style(value_label)
         
         return card
         
@@ -455,13 +533,7 @@ class HotkeyManagerQt(QMainWindow):
         
         # 顶部标题栏 - 参考 HTML 设计
         header_container = QWidget()
-        header_container.setStyleSheet("""
-            QWidget {
-                background-color: rgba(255, 255, 255, 0.9);
-                border: 1.5px solid #E2E8F0;
-                border-radius: 12px;
-            }
-        """)
+        header_container.setProperty("role", "panel")
         header_layout = QHBoxLayout(header_container)
         header_layout.setContentsMargins(20, 16, 20, 16)
         header_layout.setSpacing(16)
@@ -488,14 +560,7 @@ class HotkeyManagerQt(QMainWindow):
         
         # 状态指示器
         status_container = QWidget()
-        status_container.setStyleSheet("""
-            QWidget {
-                background-color: #F1F5F9;
-                border: none;
-                border-radius: 8px;
-                padding: 6px 12px;
-            }
-        """)
+        status_container.setProperty("role", "chip")
         status_layout = QHBoxLayout(status_container)
         status_layout.setContentsMargins(8, 6, 8, 6)
         status_layout.setSpacing(8)
@@ -529,6 +594,15 @@ class HotkeyManagerQt(QMainWindow):
         header_layout.addWidget(self.start_btn)
         
         main_layout.addWidget(header_container)
+
+        self.refresh_widget_style(header_container)
+        self.refresh_widget_style(status_container)
+        self.refresh_widget_style(title_label)
+        self.refresh_widget_style(subtitle_label)
+        self.refresh_widget_style(self.status_indicator)
+        self.refresh_widget_style(self.status_label)
+        self.refresh_widget_style(self.sleep_btn)
+        self.refresh_widget_style(self.start_btn)
         
         # 统计卡片区域 - 参考 HTML 设计
         stats_layout = QHBoxLayout()
@@ -554,13 +628,7 @@ class HotkeyManagerQt(QMainWindow):
         
         # 添加快捷键区域 - 白色卡片
         add_container = QWidget()
-        add_container.setStyleSheet("""
-            QWidget {
-                background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
-                border-radius: 12px;
-            }
-        """)
+        add_container.setProperty("role", "card")
         add_layout = QVBoxLayout(add_container)
         add_layout.setContentsMargins(24, 20, 24, 20)
         add_layout.setSpacing(18)
@@ -568,6 +636,9 @@ class HotkeyManagerQt(QMainWindow):
         add_label = QLabel("添加快捷键")
         add_label.setProperty("role", "sectionTitle")
         add_layout.addWidget(add_label)
+
+        self.refresh_widget_style(add_container)
+        self.refresh_widget_style(add_label)
         
         # 快捷键输入
         hotkey_layout = QHBoxLayout()
@@ -855,7 +926,10 @@ class HotkeyManagerQt(QMainWindow):
     def closeEvent(self, event):
         """关闭事件"""
         self.logger.info("窗口关闭")
+        if not self._is_quitting and self.tray_icon is not None:
+            self.hide()
+            event.ignore()
+            return
         if self.is_monitoring:
             self.hotkey_manager.stop()
-        # 不再自动关闭防休眠，保持用户设置的状态
         event.accept()
