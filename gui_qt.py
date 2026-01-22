@@ -130,66 +130,15 @@ class HotkeyManagerQt(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_status)
         self.timer.start(2000)
-    
-    def create_stat_card(self, title, value, bg_color, icon_color):
-        """创建统计卡片"""
-        card = QWidget()
-        card.setStyleSheet(f"""
-            QWidget {{
-                background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
-                border-radius: 12px;
-            }}
-        """)
-        card.setMinimumHeight(100)
-        
-        card_layout = QHBoxLayout(card)
-        card_layout.setContentsMargins(20, 16, 20, 16)
-        
-        # 左侧文本
-        text_layout = QVBoxLayout()
-        text_layout.setSpacing(4)
-        
-        title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 12px; color: #64748B; background-color: transparent; border: none;")
-        text_layout.addWidget(title_label)
-        
-        value_label = QLabel(value)
-        value_label.setObjectName("value_label")
-        value_label.setStyleSheet("font-size: 28px; font-weight: 600; color: #0F172A; background-color: transparent; border: none;")
-        text_layout.addWidget(value_label)
-        
-        card_layout.addLayout(text_layout)
-        card_layout.addStretch()
-        
-        # 右侧图标
-        icon_container = QWidget()
-        icon_container.setFixedSize(48, 48)
-        icon_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {bg_color};
-                border-radius: 10px;
-                border: none;
-            }}
-        """)
-        
-        card_layout.addWidget(icon_container)
-        
-        return card
-        
-    def init_ui(self):
-        """初始化界面"""
-        self.setWindowTitle("快捷键启动工具")
-        self.setGeometry(100, 100, 1100, 750)
-        
-        # 设置浅色商务风格主题
-        self.setStyleSheet("""
+
+    def build_stylesheet(self):
+        return """
             QMainWindow {
                 background-color: #F8FAFC;
             }
             QWidget {
                 color: #334155;
-                font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+                font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', sans-serif;
                 font-size: 14px;
             }
             QWidget#centralWidget {
@@ -199,6 +148,62 @@ class HotkeyManagerQt(QMainWindow):
                 color: #334155;
                 background-color: transparent;
                 border: none;
+            }
+            QLabel[role="pageTitle"] {
+                font-size: 18px;
+                font-weight: 600;
+                color: #0F172A;
+            }
+            QLabel[role="subtitle"] {
+                font-size: 12px;
+                color: #64748B;
+            }
+            QLabel[role="sectionTitle"] {
+                font-size: 16px;
+                font-weight: 600;
+                color: #334155;
+            }
+            QLabel[role="statTitle"] {
+                font-size: 13px;
+                color: #64748B;
+            }
+            QLabel[role="statValue"] {
+                font-size: 28px;
+                font-weight: 600;
+                color: #0F172A;
+            }
+            QLabel[role="statValue"][state="on"] {
+                color: #10B981;
+            }
+            QLabel[role="statValue"][state="off"] {
+                color: #64748B;
+            }
+            QLabel[role="fieldLabel"] {
+                color: #64748B;
+                font-weight: 500;
+                font-size: 14px;
+            }
+            QLabel[role="statusDot"] {
+                font-size: 16px;
+            }
+            QLabel[role="statusDot"][state="running"] {
+                font-size: 18px;
+            }
+            QLabel[role="statusDot"][state="running"] {
+                color: #10B981;
+            }
+            QLabel[role="statusDot"][state="stopped"] {
+                color: #EF4444;
+            }
+            QLabel[role="statusText"] {
+                font-weight: 600;
+                font-size: 14px;
+            }
+            QLabel[role="statusText"][state="running"] {
+                color: #334155;
+            }
+            QLabel[role="statusText"][state="stopped"] {
+                color: #475569;
             }
             QLineEdit {
                 background-color: #FFFFFF;
@@ -232,6 +237,100 @@ class HotkeyManagerQt(QMainWindow):
             QPushButton:pressed {
                 background-color: #E2E8F0;
             }
+            QPushButton[size="sm"] {
+                padding: 8px 20px;
+                border-radius: 6px;
+                font-weight: 600;
+            }
+            QPushButton[size="md"] {
+                padding: 10px 24px;
+                border-radius: 8px;
+                font-weight: 600;
+            }
+            QPushButton[size="lg"] {
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 600;
+            }
+            QPushButton[size="xl"] {
+                padding: 12px 28px;
+                border-radius: 8px;
+                font-weight: 600;
+            }
+            QPushButton[variant="primary"] {
+                background-color: #3B82F6;
+                color: white;
+                border: none;
+            }
+            QPushButton[variant="primary"]:hover {
+                background-color: #2563EB;
+            }
+            QPushButton[variant="primary"]:pressed {
+                background-color: #1D4ED8;
+            }
+            QPushButton[variant="warning"] {
+                background-color: #F97316;
+                color: white;
+                border: none;
+            }
+            QPushButton[variant="warning"]:hover {
+                background-color: #EA580C;
+            }
+            QPushButton[variant="warning"]:pressed {
+                background-color: #C2410C;
+            }
+            QPushButton[variant="success"] {
+                background-color: #10B981;
+                color: white;
+                border: none;
+            }
+            QPushButton[variant="success"]:hover {
+                background-color: #059669;
+            }
+            QPushButton[variant="success"]:pressed {
+                background-color: #047857;
+            }
+            QPushButton[variant="danger"] {
+                background-color: #EF4444;
+                color: white;
+                border: none;
+            }
+            QPushButton[variant="danger"]:hover {
+                background-color: #DC2626;
+            }
+            QPushButton[variant="danger"]:pressed {
+                background-color: #B91C1C;
+            }
+            QPushButton[variant="muted"] {
+                background-color: #64748B;
+                color: white;
+                border: none;
+            }
+            QPushButton[variant="muted"]:hover {
+                background-color: #475569;
+            }
+            QPushButton[variant="muted"]:pressed {
+                background-color: #334155;
+            }
+            QPushButton[variant="soft"] {
+                background-color: #F8FAFC;
+                border: 1.5px solid #E2E8F0;
+                color: #475569;
+            }
+            QPushButton[variant="soft"]:hover {
+                background-color: #F1F5F9;
+                border-color: #CBD5E1;
+            }
+            QPushButton[variant="outline"] {
+                background-color: transparent;
+                border: 1.5px solid #E2E8F0;
+                color: #64748B;
+            }
+            QPushButton[variant="outline"]:hover {
+                background-color: #F8FAFC;
+                color: #475569;
+                border-color: #CBD5E1;
+            }
             QTableWidget {
                 background-color: #FFFFFF;
                 border: 1.5px solid #E2E8F0;
@@ -260,9 +359,7 @@ class HotkeyManagerQt(QMainWindow):
                 border: none;
                 border-bottom: 1.5px solid #E2E8F0;
                 font-weight: 600;
-                text-transform: uppercase;
-                font-size: 11px;
-                letter-spacing: 0.5px;
+                font-size: 12px;
             }
             QMessageBox {
                 background-color: #FFFFFF;
@@ -279,18 +376,78 @@ class HotkeyManagerQt(QMainWindow):
                 padding: 8px 20px;
                 border-radius: 6px;
                 font-weight: 600;
-                font-size: 13px;
+                font-size: 14px;
                 min-width: 80px;
             }
             QMessageBox QPushButton:hover {
                 background-color: #2563EB;
             }
+            QMessageBox QPushButton:pressed {
+                background-color: #1D4ED8;
+            }
+        """
+
+    def refresh_widget_style(self, widget):
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
+    
+    def create_stat_card(self, title, value, bg_color, icon_color):
+        """创建统计卡片"""
+        card = QWidget()
+        card.setStyleSheet(f"""
+            QWidget {{
+                background-color: #FFFFFF;
+                border: 1.5px solid #E2E8F0;
+                border-radius: 12px;
+            }}
         """)
+        card.setMinimumHeight(100)
+        
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(20, 16, 20, 16)
+        
+        # 左侧文本
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(4)
+        
+        title_label = QLabel(title)
+        title_label.setProperty("role", "statTitle")
+        text_layout.addWidget(title_label)
+        
+        value_label = QLabel(value)
+        value_label.setObjectName("value_label")
+        value_label.setProperty("role", "statValue")
+        text_layout.addWidget(value_label)
+        
+        card_layout.addLayout(text_layout)
+        card_layout.addStretch()
+        
+        # 右侧图标
+        icon_container = QWidget()
+        icon_container.setFixedSize(48, 48)
+        icon_container.setStyleSheet(f"""
+            QWidget {{
+                background-color: {bg_color};
+                border-radius: 10px;
+                border: none;
+            }}
+        """)
+        
+        card_layout.addWidget(icon_container)
+        
+        return card
+        
+    def init_ui(self):
+        """初始化界面"""
+        self.setWindowTitle("快捷键启动工具")
+        self.setGeometry(100, 100, 1100, 750)
+        
+        self.setStyleSheet(self.build_stylesheet())
         
         # 主窗口部件
         central_widget = QWidget()
         central_widget.setObjectName("centralWidget")
-        central_widget.setStyleSheet("background-color: #F8FAFC;")
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(24, 20, 24, 24)
@@ -317,11 +474,11 @@ class HotkeyManagerQt(QMainWindow):
         title_layout.setSpacing(2)
         
         title_label = QLabel("快捷键启动工具")
-        title_label.setStyleSheet("font-size: 18px; font-weight: 600; color: #0F172A; background-color: transparent; border: none;")
+        title_label.setProperty("role", "pageTitle")
         title_layout.addWidget(title_label)
         
         subtitle_label = QLabel("全局快捷键 · 智能防休眠")
-        subtitle_label.setStyleSheet("font-size: 11px; color: #64748B; background-color: transparent; border: none;")
+        subtitle_label.setProperty("role", "subtitle")
         title_layout.addWidget(subtitle_label)
         
         logo_title_layout.addLayout(title_layout)
@@ -344,11 +501,13 @@ class HotkeyManagerQt(QMainWindow):
         status_layout.setSpacing(8)
         
         self.status_indicator = QLabel("●")
-        self.status_indicator.setStyleSheet("color: #EF4444; font-size: 16px; background-color: transparent;")
+        self.status_indicator.setProperty("role", "statusDot")
+        self.status_indicator.setProperty("state", "stopped")
         status_layout.addWidget(self.status_indicator)
         
         self.status_label = QLabel("未启动")
-        self.status_label.setStyleSheet("color: #475569; font-weight: 600; font-size: 13px; background-color: transparent;")
+        self.status_label.setProperty("role", "statusText")
+        self.status_label.setProperty("state", "stopped")
         status_layout.addWidget(self.status_label)
         
         header_layout.addWidget(status_container)
@@ -357,46 +516,16 @@ class HotkeyManagerQt(QMainWindow):
         self.sleep_btn = QPushButton("开启防休眠")
         self.sleep_btn.clicked.connect(self.toggle_sleep_prevention)
         self.sleep_btn.setMinimumHeight(44)
-        self.sleep_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #F97316;
-                color: white;
-                border: none;
-                padding: 10px 24px;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #EA580C;
-            }
-            QPushButton:pressed {
-                background-color: #C2410C;
-            }
-        """)
+        self.sleep_btn.setProperty("variant", "warning")
+        self.sleep_btn.setProperty("size", "md")
         header_layout.addWidget(self.sleep_btn)
         
         # 启动按钮
         self.start_btn = QPushButton("启动监听")
         self.start_btn.clicked.connect(self.toggle_monitoring)
         self.start_btn.setMinimumHeight(44)
-        self.start_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3B82F6;
-                color: white;
-                border: none;
-                padding: 10px 24px;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #2563EB;
-            }
-            QPushButton:pressed {
-                background-color: #1D4ED8;
-            }
-        """)
+        self.start_btn.setProperty("variant", "primary")
+        self.start_btn.setProperty("size", "md")
         header_layout.addWidget(self.start_btn)
         
         main_layout.addWidget(header_container)
@@ -418,6 +547,7 @@ class HotkeyManagerQt(QMainWindow):
         # 卡片3: 防休眠状态
         card3 = self.create_stat_card("防休眠状态", "关闭", "#FED7AA", "#F97316")
         self.sleep_status_label = card3.findChild(QLabel, "value_label")
+        self.sleep_status_label.setProperty("state", "off")
         stats_layout.addWidget(card3)
         
         main_layout.addLayout(stats_layout)
@@ -436,13 +566,7 @@ class HotkeyManagerQt(QMainWindow):
         add_layout.setSpacing(18)
         
         add_label = QLabel("添加快捷键")
-        add_label.setStyleSheet("""
-            font-size: 16px;
-            font-weight: 600;
-            color: #334155;
-            background-color: transparent;
-            border: none;
-        """)
+        add_label.setProperty("role", "sectionTitle")
         add_layout.addWidget(add_label)
         
         # 快捷键输入
@@ -450,7 +574,8 @@ class HotkeyManagerQt(QMainWindow):
         hotkey_layout.setSpacing(14)
         
         hotkey_label = QLabel("快捷键")
-        hotkey_label.setStyleSheet("color: #64748B; min-width: 80px; font-weight: 500; background-color: transparent; font-size: 14px; border: none;")
+        hotkey_label.setMinimumWidth(80)
+        hotkey_label.setProperty("role", "fieldLabel")
         hotkey_layout.addWidget(hotkey_label)
         
         self.hotkey_input = HotkeyRecorder()
@@ -464,7 +589,8 @@ class HotkeyManagerQt(QMainWindow):
         path_layout.setSpacing(14)
         
         path_label = QLabel("目标路径")
-        path_label.setStyleSheet("color: #64748B; min-width: 80px; font-weight: 500; background-color: transparent; font-size: 14px; border: none;")
+        path_label.setMinimumWidth(80)
+        path_label.setProperty("role", "fieldLabel")
         path_layout.addWidget(path_label)
         
         self.path_input = QLineEdit()
@@ -475,37 +601,17 @@ class HotkeyManagerQt(QMainWindow):
         browse_file_btn = QPushButton("📁 浏览文件")
         browse_file_btn.clicked.connect(self.browse_file)
         browse_file_btn.setMinimumHeight(44)
-        browse_file_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #F8FAFC;
-                border: 1.5px solid #E2E8F0;
-                color: #475569;
-                min-width: 110px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #F1F5F9;
-                border-color: #CBD5E1;
-            }
-        """)
+        browse_file_btn.setMinimumWidth(110)
+        browse_file_btn.setProperty("variant", "soft")
+        browse_file_btn.setProperty("size", "md")
         path_layout.addWidget(browse_file_btn)
         
         browse_folder_btn = QPushButton("📂 浏览文件夹")
         browse_folder_btn.clicked.connect(self.browse_folder)
         browse_folder_btn.setMinimumHeight(44)
-        browse_folder_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #F8FAFC;
-                border: 1.5px solid #E2E8F0;
-                color: #475569;
-                min-width: 120px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #F1F5F9;
-                border-color: #CBD5E1;
-            }
-        """)
+        browse_folder_btn.setMinimumWidth(120)
+        browse_folder_btn.setProperty("variant", "soft")
+        browse_folder_btn.setProperty("size", "md")
         path_layout.addWidget(browse_folder_btn)
         
         add_layout.addLayout(path_layout)
@@ -517,43 +623,15 @@ class HotkeyManagerQt(QMainWindow):
         add_btn = QPushButton("✓ 添加快捷键")
         add_btn.clicked.connect(self.add_hotkey)
         add_btn.setMinimumHeight(44)
-        add_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #10B981;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #059669;
-            }
-            QPushButton:pressed {
-                background-color: #047857;
-            }
-        """)
+        add_btn.setProperty("variant", "success")
+        add_btn.setProperty("size", "lg")
         btn_layout.addWidget(add_btn)
         
         clear_btn = QPushButton("清空")
         clear_btn.clicked.connect(self.clear_inputs)
         clear_btn.setMinimumHeight(44)
-        clear_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: 1.5px solid #E2E8F0;
-                color: #64748B;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #F8FAFC;
-                color: #475569;
-                border-color: #CBD5E1;
-            }
-        """)
+        clear_btn.setProperty("variant", "outline")
+        clear_btn.setProperty("size", "lg")
         btn_layout.addWidget(clear_btn)
         
         btn_layout.addStretch()
@@ -563,14 +641,7 @@ class HotkeyManagerQt(QMainWindow):
         
         # 快捷键列表
         list_label = QLabel("快捷键列表")
-        list_label.setStyleSheet("""
-            font-size: 16px;
-            font-weight: 600;
-            color: #334155;
-            margin-top: 4px;
-            background-color: transparent;
-            border: none;
-        """)
+        list_label.setProperty("role", "sectionTitle")
         main_layout.addWidget(list_label)
         
         self.table = QTableWidget()
@@ -605,23 +676,8 @@ class HotkeyManagerQt(QMainWindow):
         delete_btn = QPushButton("删除")
         delete_btn.clicked.connect(lambda: self.delete_row(row))
         delete_btn.setMinimumHeight(36)
-        delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #EF4444;
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 6px;
-                font-weight: 600;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #DC2626;
-            }
-            QPushButton:pressed {
-                background-color: #B91C1C;
-            }
-        """)
+        delete_btn.setProperty("variant", "danger")
+        delete_btn.setProperty("size", "sm")
         self.table.setCellWidget(row, 2, delete_btn)
     
     def add_hotkey(self):
@@ -719,48 +775,20 @@ class HotkeyManagerQt(QMainWindow):
         if self.sleep_prevention_enabled:
             self.power_manager.prevent_sleep()
             self.sleep_btn.setText("关闭防休眠")
-            self.sleep_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #64748B;
-                    color: white;
-                    border: none;
-                    padding: 10px 24px;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 14px;
-                }
-                QPushButton:hover {
-                    background-color: #475569;
-                }
-                QPushButton:pressed {
-                    background-color: #334155;
-                }
-            """)
+            self.sleep_btn.setProperty("variant", "muted")
+            self.refresh_widget_style(self.sleep_btn)
             self.sleep_status_label.setText("开启")
-            self.sleep_status_label.setStyleSheet("font-size: 28px; font-weight: 600; color: #10B981; background-color: transparent; border: none;")
+            self.sleep_status_label.setProperty("state", "on")
+            self.refresh_widget_style(self.sleep_status_label)
             self.logger.info("手动开启防休眠")
         else:
             self.power_manager.allow_sleep()
             self.sleep_btn.setText("开启防休眠")
-            self.sleep_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #F97316;
-                    color: white;
-                    border: none;
-                    padding: 10px 24px;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 14px;
-                }
-                QPushButton:hover {
-                    background-color: #EA580C;
-                }
-                QPushButton:pressed {
-                    background-color: #C2410C;
-                }
-            """)
+            self.sleep_btn.setProperty("variant", "warning")
+            self.refresh_widget_style(self.sleep_btn)
             self.sleep_status_label.setText("关闭")
-            self.sleep_status_label.setStyleSheet("font-size: 28px; font-weight: 600; color: #64748B; background-color: transparent; border: none;")
+            self.sleep_status_label.setProperty("state", "off")
+            self.refresh_widget_style(self.sleep_status_label)
             self.logger.info("手动关闭防休眠")
     
     def toggle_monitoring(self):
@@ -778,26 +806,14 @@ class HotkeyManagerQt(QMainWindow):
                 
                 self.is_monitoring = True
                 self.start_btn.setText("停止监听")
-                self.start_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #EF4444;
-                        color: white;
-                        border: none;
-                        padding: 12px 28px;
-                        border-radius: 8px;
-                        font-weight: 600;
-                        font-size: 14px;
-                    }
-                    QPushButton:hover {
-                        background-color: #DC2626;
-                    }
-                    QPushButton:pressed {
-                        background-color: #B91C1C;
-                    }
-                """)
+                self.start_btn.setProperty("variant", "danger")
+                self.start_btn.setProperty("size", "xl")
+                self.refresh_widget_style(self.start_btn)
                 self.status_label.setText("运行中")
-                self.status_label.setStyleSheet("color: #334155; font-weight: 600; font-size: 14px; background-color: transparent;")
-                self.status_indicator.setStyleSheet("color: #10B981; font-size: 18px; background-color: transparent;")
+                self.status_label.setProperty("state", "running")
+                self.status_indicator.setProperty("state", "running")
+                self.refresh_widget_style(self.status_label)
+                self.refresh_widget_style(self.status_indicator)
                 
                 # 不再自动启动防休眠，由用户手动控制
                 self.logger.info("启动监听")
@@ -810,26 +826,14 @@ class HotkeyManagerQt(QMainWindow):
                 # 不再自动关闭防休眠，由用户手动控制
                 self.is_monitoring = False
                 self.start_btn.setText("启动监听")
-                self.start_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #3B82F6;
-                        color: white;
-                        border: none;
-                        padding: 12px 28px;
-                        border-radius: 8px;
-                        font-weight: 600;
-                        font-size: 14px;
-                    }
-                    QPushButton:hover {
-                        background-color: #2563EB;
-                    }
-                    QPushButton:pressed {
-                        background-color: #1D4ED8;
-                    }
-                """)
+                self.start_btn.setProperty("variant", "primary")
+                self.start_btn.setProperty("size", "md")
+                self.refresh_widget_style(self.start_btn)
                 self.status_label.setText("未启动")
-                self.status_label.setStyleSheet("color: #334155; font-weight: 600; font-size: 14px; background-color: transparent;")
-                self.status_indicator.setStyleSheet("color: #EF4444; font-size: 18px; background-color: transparent;")
+                self.status_label.setProperty("state", "stopped")
+                self.status_indicator.setProperty("state", "stopped")
+                self.refresh_widget_style(self.status_label)
+                self.refresh_widget_style(self.status_indicator)
                 
                 # 不再自动关闭防休眠，由用户手动控制
                 self.logger.info("停止监听")

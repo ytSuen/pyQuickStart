@@ -55,34 +55,6 @@ def main():
         
         app = QApplication(sys.argv)
         
-        # 设置全局 QMessageBox 样式
-        app.setStyleSheet("""
-            QMessageBox {
-                background-color: #FFFFFF;
-            }
-            QMessageBox QLabel {
-                color: #334155;
-                font-size: 14px;
-                background-color: transparent;
-            }
-            QMessageBox QPushButton {
-                background-color: #3B82F6;
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 6px;
-                font-weight: 600;
-                font-size: 13px;
-                min-width: 80px;
-            }
-            QMessageBox QPushButton:hover {
-                background-color: #2563EB;
-            }
-            QMessageBox QPushButton:pressed {
-                background-color: #1D4ED8;
-            }
-        """)
-        
         window = HotkeyManagerQt()
         window.show()
         sys.exit(app.exec_())
