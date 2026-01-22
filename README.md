@@ -2,6 +2,18 @@
 
 一个 Windows 桌面工具，支持自定义全局快捷键快速启动程序、打开网页、访问文件夹，并提供独立的防休眠功能。
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
+
+## 📸 界面预览
+
+现代化的浅色商务风格界面，简洁易用：
+- 实时统计卡片（配置快捷键数、运行中程序数、防休眠状态）
+- 快捷键录制输入框（点击后直接按下快捷键组合）
+- 独立的防休眠控制按钮
+- 清晰的快捷键列表管理
+
 ## ✨ 功能特性
 
 - 🎯 **全局快捷键监听**（支持 Ctrl+Alt+Shift+Win 组合键）
@@ -169,10 +181,53 @@ pytest --cov=. --cov-report=html
 
 ## 📦 打包发布
 
+使用 PyInstaller 打包成独立可执行文件：
+
 ```bash
+# 安装 PyInstaller
 pip install pyinstaller
-pyinstaller --onefile --windowed --name="快捷键工具" main.py
+
+# 打包成单文件（带窗口）
+pyinstaller --onefile --windowed --icon=resources/SYT.png --name="快捷键启动工具" main.py
+
+# 打包后的文件在 dist/ 目录下
 ```
+
+**注意**：打包后的 exe 文件仍需要以管理员权限运行。
+
+## 🔧 开发相关
+
+### 代码结构
+
+- `main.py` - 程序入口，自动请求管理员权限
+- `gui_qt.py` - PyQt5 界面，包含所有 UI 组件和交互逻辑
+- `hotkey_manager.py` - 快捷键管理，使用 keyboard 库监听全局快捷键
+- `power_manager.py` - 电源管理，使用 ctypes 调用 Windows API 防止休眠
+- `config_manager.py` - 配置管理，JSON 格式存储
+- `logger.py` - 日志记录，按日期分文件
+
+### 技术栈
+
+- **GUI**: PyQt5
+- **快捷键**: keyboard
+- **进程管理**: psutil
+- **电源管理**: ctypes (Windows API)
+- **测试**: pytest
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📝 更新日志
+
+### v1.0.0 (2026-01-22)
+- ✅ 实现全局快捷键监听
+- ✅ 支持多种目标类型（程序、网页、文件夹）
+- ✅ 独立防休眠控制
+- ✅ 进程监控和防重复启动
+- ✅ 快捷键冲突检测
+- ✅ 现代化 PyQt5 界面
+- ✅ 自动请求管理员权限
 
 ## 📄 许可证
 

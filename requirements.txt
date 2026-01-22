@@ -1,5 +1,9 @@
-keyboard>=0.13.5
-psutil>=5.9.0
-PyQt5>=5.15.0
-pytest>=7.4.0
-hypothesis>=6.82.0
+# 核心依赖
+keyboard>=0.13.5      # 全局快捷键监听
+psutil>=5.9.0         # 进程管理和监控
+PyQt5>=5.15.0         # 现代化桌面界面
+
+# 开发和测试依赖
+pytest>=7.4.0         # 单元测试框架
+hypothesis>=6.82.0    # 属性测试框架
+pytest-cov>=4.0.0     # 测试覆盖率
