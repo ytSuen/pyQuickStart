@@ -277,20 +277,38 @@ class HotkeyManagerQt(QMainWindow):
             QMessageBox.warning(self, "输入不完整", "请填写快捷键和目标路径")
             return
         
-        if self.hotkey_manager.add_hotkey(hotkey, path):
+        # 检查冲突
+        has_conflict, conflict_msg = self.hotkey_manager.check_system_conflict(hotkey)
+        if has_conflict:
+            reply = QMessageBox.question(
+                self, "快捷键冲突", 
+                f"{conflict_msg}\n\n是否仍要继续添加？",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                return
+        
+        success, msg = self.hotkey_manager.add_hotkey(hotkey, path)
+        if success:
             self.config_manager.add_hotkey(hotkey, path)
             self.add_table_row(hotkey, path)
             
             if self.is_monitoring:
                 self.hotkey_manager.stop()
-                self.hotkey_manager.start()
+                success, start_msg = self.hotkey_manager.start()
+                if not success:
+                    QMessageBox.warning(self, "重启监听失败", start_msg)
             
             self.hotkey_input.clear()
             self.path_input.clear()
-            QMessageBox.information(self, "成功", f"快捷键 '{hotkey}' 已添加")
+            
+            if has_conflict:
+                QMessageBox.information(self, "添加成功（有警告）", f"快捷键 '{hotkey}' 已添加\n\n警告: {conflict_msg}")
+            else:
+                QMessageBox.information(self, "成功", f"快捷键 '{hotkey}' 已添加")
             self.logger.info(f"添加快捷键: {hotkey} -> {path}")
         else:
-            QMessageBox.critical(self, "失败", "添加快捷键失败")
+            QMessageBox.critical(self, "失败", msg)
     
     def delete_row(self, row):
         """删除指定行"""
@@ -346,13 +364,17 @@ class HotkeyManagerQt(QMainWindow):
                 return
             
             try:
-                self.hotkey_manager.start()
+                success, msg = self.hotkey_manager.start()
+                if not success:
+                    QMessageBox.critical(self, "启动失败", msg)
+                    return
+                
                 self.is_monitoring = True
                 self.start_btn.setText("停止监听")
                 self.status_label.setText("状态: 运行中")
                 self.status_label.setStyleSheet("color: green; font-weight: bold;")
                 self.logger.info("启动监听")
-                QMessageBox.information(self, "成功", "快捷键监听已启动")
+                QMessageBox.information(self, "成功", "快捷键监听已启动\n\n提示: 如果快捷键无响应，请确保以管理员身份运行程序")
             except Exception as e:
                 QMessageBox.critical(self, "失败", f"启动失败: {e}")
         else:

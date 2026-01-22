@@ -7,8 +7,9 @@ import subprocess
 import psutil
 import threading
 import time
+import ctypes
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Set
 from logger import Logger
 
 
@@ -21,6 +22,16 @@ class HotkeyManager:
         self.running_processes: List[psutil.Process] = []
         self.logger = Logger()
         self.is_running = False
+        
+        # 常见的系统保留快捷键
+        self.system_hotkeys: Set[str] = {
+            'ctrl+alt+delete', 'ctrl+alt+del',
+            'ctrl+shift+esc',
+            'win+l', 'win+d', 'win+e', 'win+r', 'win+tab',
+            'win+i', 'win+s', 'win+a', 'win+x',
+            'alt+tab', 'alt+f4',
+            'ctrl+alt+tab',
+        }
 
     def _validate_hotkey_format(self, hotkey: str) -> bool:
         """
@@ -61,29 +72,63 @@ class HotkeyManager:
         path = Path(target_path)
         return path.exists()  # 文件或文件夹存在即可
 
-    def add_hotkey(self, hotkey: str, target_path: str) -> bool:
-        """添加快捷键绑定"""
+    def check_system_conflict(self, hotkey: str) -> tuple[bool, str]:
+        """
+        检查快捷键是否与系统快捷键冲突
+        返回: (是否冲突, 冲突说明)
+        """
+        hotkey_lower = hotkey.lower()
+        
+        # 检查是否是系统保留快捷键
+        if hotkey_lower in self.system_hotkeys:
+            return True, f"'{hotkey}' 是系统保留快捷键，可能无法正常工作"
+        
+        # 检查是否与已有快捷键冲突
+        if hotkey in self.hotkeys:
+            return True, f"'{hotkey}' 已被绑定到: {self.hotkeys[hotkey]}"
+        
+        return False, ""
+    
+    def is_admin(self) -> bool:
+        """检查是否以管理员权限运行"""
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
+
+    def add_hotkey(self, hotkey: str, target_path: str) -> tuple[bool, str]:
+        """
+        添加快捷键绑定
+        返回: (是否成功, 消息)
+        """
         try:
             # 验证快捷键格式
             if not self._validate_hotkey_format(hotkey):
-                self.logger.error(f"快捷键格式无效: {hotkey}，必须包含至少一个修饰键（ctrl/alt/shift/win）")
-                return False
+                msg = f"快捷键格式无效: {hotkey}，必须包含至少一个修饰键（ctrl/alt/shift/win）"
+                self.logger.error(msg)
+                return False, msg
 
             # 验证目标路径
             if not self._validate_target(target_path):
-                self.logger.error(f"目标路径无效: {target_path}")
-                return False
+                msg = f"目标路径无效: {target_path}"
+                self.logger.error(msg)
+                return False, msg
 
-            # 检查快捷键是否已存在
-            if hotkey in self.hotkeys:
-                self.logger.warning(f"快捷键 {hotkey} 已存在，将被覆盖")
+            # 检查系统冲突
+            has_conflict, conflict_msg = self.check_system_conflict(hotkey)
+            if has_conflict:
+                self.logger.warning(conflict_msg)
+                # 如果是已存在的快捷键，允许覆盖
+                if hotkey not in self.hotkeys:
+                    return False, conflict_msg
 
             self.hotkeys[hotkey] = target_path
             self.logger.info(f"添加快捷键: {hotkey} -> {target_path}")
-            return True
+            return True, "添加成功"
         except Exception as e:
-            self.logger.error(f"添加快捷键失败: {e}")
-            return False
+            msg = f"添加快捷键失败: {e}"
+            self.logger.error(msg)
+            return False, msg
 
     def remove_hotkey(self, hotkey: str) -> bool:
         """移除快捷键绑定"""
@@ -165,12 +210,22 @@ class HotkeyManager:
         except Exception as e:
             self.logger.error(f"启动失败: {e}")
 
-    def start(self):
-        """启动快捷键监听"""
+    def start(self) -> tuple[bool, str]:
+        """
+        启动快捷键监听
+        返回: (是否成功, 消息)
+        """
         if self.is_running:
-            return
+            return True, "监听已在运行"
+
+        # 检查管理员权限
+        if not self.is_admin():
+            msg = "需要管理员权限才能监听全局快捷键！\n请右键点击程序，选择"以管理员身份运行""
+            self.logger.error(msg)
+            return False, msg
 
         self.is_running = True
+        failed_hotkeys = []
 
         # 注册所有快捷键
         for hotkey, program_path in self.hotkeys.items():
@@ -179,12 +234,19 @@ class HotkeyManager:
                 self.logger.info(f"注册快捷键: {hotkey}")
             except Exception as e:
                 self.logger.error(f"注册快捷键失败 {hotkey}: {e}")
+                failed_hotkeys.append(hotkey)
 
         # 启动进程监控线程
         monitor_thread = threading.Thread(target=self._monitor_processes, daemon=True)
         monitor_thread.start()
 
         self.logger.info("快捷键监听已启动")
+        
+        if failed_hotkeys:
+            msg = f"部分快捷键注册失败: {', '.join(failed_hotkeys)}"
+            return False, msg
+        
+        return True, "监听启动成功"
 
     def stop(self):
         """停止快捷键监听"""
