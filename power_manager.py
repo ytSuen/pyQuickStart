@@ -4,6 +4,8 @@
 """
 import ctypes
 import threading
+import time
+from pynput.keyboard import Controller, Key
 from logger import Logger
 
 # Windows电源管理常量
@@ -38,6 +40,9 @@ class PowerManager:
         self._keepalive_timer = None
         self._keepalive_interval_seconds = 30
         self._power_request_handle = None
+        self._keyboard = Controller()
+        self._keyboard_simulation_timer = None
+        self._keyboard_simulation_interval = 60  # 每60秒模拟一次按键
 
     def _get_set_thread_execution_state(self):
         if not hasattr(ctypes, "windll"):
@@ -145,6 +150,46 @@ class PowerManager:
             except Exception:
                 pass
 
+    def _simulate_key_press(self):
+        """模拟无感按键操作 - 按下并释放F15键（不会影响用户操作）"""
+        try:
+            # 使用F15键，这是一个很少使用的功能键，不会干扰用户操作
+            self._keyboard.press(Key.f15)
+            time.sleep(0.01)  # 短暂延迟
+            self._keyboard.release(Key.f15)
+            self.logger.debug("模拟按键操作完成 (F15)")
+        except Exception as e:
+            self.logger.error(f"模拟按键失败: {e}")
+
+    def _cancel_keyboard_simulation(self):
+        """取消键盘模拟定时器"""
+        timer = self._keyboard_simulation_timer
+        self._keyboard_simulation_timer = None
+        if timer is not None:
+            try:
+                timer.cancel()
+            except Exception:
+                pass
+
+    def _schedule_keyboard_simulation(self):
+        """调度键盘模拟任务"""
+        self._cancel_keyboard_simulation()
+        if not self.is_preventing_sleep:
+            return
+
+        def _tick():
+            if not self.is_preventing_sleep:
+                return
+            try:
+                self._simulate_key_press()
+            finally:
+                self._schedule_keyboard_simulation()
+
+        timer = threading.Timer(self._keyboard_simulation_interval, _tick)
+        timer.daemon = True
+        self._keyboard_simulation_timer = timer
+        timer.start()
+
     def _schedule_keepalive(self):
         self._cancel_keepalive()
         if not self.is_preventing_sleep:
@@ -192,9 +237,10 @@ class PowerManager:
 
             self.is_preventing_sleep = True
             self._schedule_keepalive()
-            self.logger.info(f"已启用防休眠模式 (API返回值: {result})")
+            self._schedule_keyboard_simulation()  # 启动键盘模拟
+            self.logger.info(f"已启用防休眠模式 (API返回值: {result}，包含键盘模拟)")
             if not ok_power_request:
-                self.logger.warning("PowerSetRequest 未生效/不可用，本次仅依赖 SetThreadExecutionState")
+                self.logger.warning("PowerSetRequest 未生效/不可用，本次仅依赖 SetThreadExecutionState + 键盘模拟")
             return True
         except Exception as e:
             self.logger.error(f"启用防休眠失败: {e}")
@@ -208,6 +254,7 @@ class PowerManager:
 
         try:
             self._cancel_keepalive()
+            self._cancel_keyboard_simulation()  # 取消键盘模拟
 
             ok_power_clear = self._clear_power_requests()
 
