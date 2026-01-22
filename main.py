@@ -17,6 +17,24 @@ def is_admin():
         return False
 
 
+def _truthy(value: str) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def should_start_hidden() -> bool:
+    if _truthy(os.environ.get("PYQS_START_HIDDEN")):
+        return True
+    return "--hidden" in sys.argv
+
+
+def should_skip_admin_relaunch() -> bool:
+    if _truthy(os.environ.get("PYQS_SKIP_ADMIN")):
+        return True
+    return "--no-admin" in sys.argv
+
+
 def hide_console_window():
     if sys.platform != 'win32':
         return
@@ -34,17 +52,22 @@ def run_as_admin():
     """请求管理员权限重新启动程序"""
     try:
         if sys.platform == 'win32':
-            # 获取当前脚本路径
-            script = sys.argv[0]
             params = ' '.join(sys.argv[1:])
-            
-            # 使用 ShellExecute 以管理员权限运行
+
+            if getattr(sys, 'frozen', False):
+                executable = sys.executable
+                args = params
+            else:
+                script = sys.argv[0]
+                executable = sys.executable
+                args = f'"{script}" {params}'.strip()
+
             ctypes.windll.shell32.ShellExecuteW(
-                None, 
-                "runas", 
-                sys.executable, 
-                f'"{script}" {params}',
-                None, 
+                None,
+                "runas",
+                executable,
+                args,
+                None,
                 1  # SW_SHOWNORMAL
             )
             return True
@@ -58,8 +81,11 @@ def main():
     """主函数"""
     try:
         hide_console_window()
+
+        start_hidden = should_start_hidden()
+        skip_admin = should_skip_admin_relaunch()
         # 检查管理员权限
-        if not is_admin():
+        if not skip_admin and not is_admin():
             print("需要管理员权限，正在请求...")
             if run_as_admin():
                 # 成功请求管理员权限，退出当前进程
@@ -72,7 +98,8 @@ def main():
         app.setQuitOnLastWindowClosed(False)
         
         window = HotkeyManagerQt()
-        window.show()
+        if not start_hidden:
+            window.show()
         sys.exit(app.exec_())
     except Exception as e:
         print(f"程序启动失败: {e}")

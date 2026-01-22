@@ -2,6 +2,8 @@
 PyQt5 图形界面
 现代化的快捷键管理界面
 """
+import os
+import sys
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QPushButton, QTableWidget, 
                              QTableWidgetItem, QFileDialog, QMessageBox, QHeaderView,
@@ -13,6 +15,11 @@ from power_manager import PowerManager
 from config_manager import ConfigManager
 from logger import Logger
 import keyboard as kb
+
+
+def resource_path(relative_path: str) -> str:
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
 
 
 class HotkeyRecorder(QLineEdit):
@@ -119,10 +126,11 @@ class HotkeyManagerQt(QMainWindow):
         
         # 设置窗口图标
         icon_path = "resources/SYT.png"
-        if QIcon(icon_path).isNull():
+        icon_file = resource_path(icon_path)
+        if QIcon(icon_file).isNull():
             self.logger.warning(f"无法加载图标: {icon_path}")
         else:
-            self.setWindowIcon(QIcon(icon_path))
+            self.setWindowIcon(QIcon(icon_file))
 
         self._is_quitting = False
         self.tray_icon = None
@@ -419,7 +427,7 @@ class HotkeyManagerQt(QMainWindow):
         if not QSystemTrayIcon.isSystemTrayAvailable():
             return
         if self.windowIcon().isNull():
-            tray_icon = QSystemTrayIcon(QIcon("resources/SYT.png"), self)
+            tray_icon = QSystemTrayIcon(QIcon(resource_path("resources/SYT.png")), self)
         else:
             tray_icon = QSystemTrayIcon(self.windowIcon(), self)
 
@@ -844,7 +852,18 @@ class HotkeyManagerQt(QMainWindow):
         self.sleep_prevention_enabled = not self.sleep_prevention_enabled
         
         if self.sleep_prevention_enabled:
-            self.power_manager.prevent_sleep()
+            ok = self.power_manager.prevent_sleep()
+            if not ok:
+                self.sleep_prevention_enabled = False
+                self.sleep_btn.setText("开启防休眠")
+                self.sleep_btn.setProperty("variant", "warning")
+                self.refresh_widget_style(self.sleep_btn)
+                self.sleep_status_label.setText("关闭")
+                self.sleep_status_label.setProperty("state", "off")
+                self.refresh_widget_style(self.sleep_status_label)
+                QMessageBox.warning(self, "防休眠失败", "启用防休眠失败，请查看日志（logs）或尝试以管理员身份运行。")
+                self.logger.error("手动开启防休眠失败")
+                return
             self.sleep_btn.setText("关闭防休眠")
             self.sleep_btn.setProperty("variant", "muted")
             self.refresh_widget_style(self.sleep_btn)
@@ -853,7 +872,18 @@ class HotkeyManagerQt(QMainWindow):
             self.refresh_widget_style(self.sleep_status_label)
             self.logger.info("手动开启防休眠")
         else:
-            self.power_manager.allow_sleep()
+            ok = self.power_manager.allow_sleep()
+            if not ok:
+                self.sleep_prevention_enabled = True
+                self.sleep_btn.setText("关闭防休眠")
+                self.sleep_btn.setProperty("variant", "muted")
+                self.refresh_widget_style(self.sleep_btn)
+                self.sleep_status_label.setText("开启")
+                self.sleep_status_label.setProperty("state", "on")
+                self.refresh_widget_style(self.sleep_status_label)
+                QMessageBox.warning(self, "关闭防休眠失败", "关闭防休眠失败，请查看日志（logs）。")
+                self.logger.error("手动关闭防休眠失败")
+                return
             self.sleep_btn.setText("开启防休眠")
             self.sleep_btn.setProperty("variant", "warning")
             self.refresh_widget_style(self.sleep_btn)
