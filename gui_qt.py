@@ -135,74 +135,72 @@ class HotkeyManagerQt(QMainWindow):
         self.setWindowTitle("快捷键启动工具")
         self.setGeometry(100, 100, 1000, 680)
         
-        # 设置现代渐变深色主题
+        # 设置浅色商务风格主题
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0F172A, stop:0.5 #1E293B, stop:1 #0F172A);
+                background-color: #F8FAFC;
             }
             QWidget {
                 background-color: transparent;
-                color: #F1F5F9;
+                color: #1E293B;
                 font-family: 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
                 font-size: 13px;
             }
             QLabel {
-                color: #F1F5F9;
+                color: #1E293B;
                 background-color: transparent;
             }
             QLineEdit {
-                background-color: rgba(30, 41, 59, 0.6);
-                border: 1px solid rgba(148, 163, 184, 0.2);
+                background-color: #FFFFFF;
+                border: 1.5px solid #E2E8F0;
                 border-radius: 8px;
                 padding: 10px 14px;
-                color: #F1F5F9;
+                color: #1E293B;
                 selection-background-color: #3B82F6;
             }
             QLineEdit:focus {
-                border: 1px solid rgba(59, 130, 246, 0.5);
-                background-color: rgba(30, 41, 59, 0.8);
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                border: 1.5px solid #3B82F6;
+                background-color: #FFFFFF;
             }
             QLineEdit::placeholder {
-                color: #64748B;
+                color: #94A3B8;
             }
             QPushButton {
-                background-color: rgba(51, 65, 85, 0.6);
-                color: #F1F5F9;
-                border: 1px solid rgba(148, 163, 184, 0.2);
+                background-color: #FFFFFF;
+                color: #475569;
+                border: 1.5px solid #E2E8F0;
                 border-radius: 8px;
                 padding: 10px 18px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(71, 85, 105, 0.8);
-                border-color: rgba(148, 163, 184, 0.3);
+                background-color: #F1F5F9;
+                border-color: #CBD5E1;
             }
             QPushButton:pressed {
-                background-color: rgba(30, 41, 59, 0.9);
+                background-color: #E2E8F0;
             }
             QTableWidget {
-                background-color: rgba(30, 41, 59, 0.4);
-                border: 1px solid rgba(148, 163, 184, 0.15);
+                background-color: #FFFFFF;
+                border: 1.5px solid #E2E8F0;
                 border-radius: 12px;
-                gridline-color: rgba(51, 65, 85, 0.3);
-                color: #F1F5F9;
+                gridline-color: #F1F5F9;
+                color: #1E293B;
             }
             QTableWidget::item {
                 padding: 12px;
                 border: none;
-                border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+                border-bottom: 1px solid #F1F5F9;
             }
             QTableWidget::item:selected {
-                background-color: rgba(59, 130, 246, 0.2);
+                background-color: #EFF6FF;
             }
             QHeaderView::section {
-                background-color: rgba(15, 23, 42, 0.6);
-                color: #94A3B8;
+                background-color: #F8FAFC;
+                color: #64748B;
                 padding: 12px;
                 border: none;
-                border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+                border-bottom: 1.5px solid #E2E8F0;
                 font-weight: 600;
                 text-transform: uppercase;
                 font-size: 11px;
@@ -217,27 +215,26 @@ class HotkeyManagerQt(QMainWindow):
         main_layout.setContentsMargins(24, 24, 24, 24)
         main_layout.setSpacing(20)
         
-        # 顶部控制栏 - 玻璃态卡片
+        # 顶部控制栏 - 白色卡片
         top_container = QWidget()
         top_container.setStyleSheet("""
             QWidget {
-                background-color: rgba(30, 41, 59, 0.5);
-                border: 1px solid rgba(148, 163, 184, 0.15);
-                border-radius: 16px;
+                background-color: #FFFFFF;
+                border: 1.5px solid #E2E8F0;
+                border-radius: 12px;
             }
         """)
         top_container_layout = QVBoxLayout(top_container)
         top_container_layout.setContentsMargins(20, 16, 20, 16)
         
         top_layout = QHBoxLayout()
-        top_layout.setSpacing(16)
+        top_layout.setSpacing(20)
         
         # Logo
         logo_label = QLabel()
         logo_pixmap = QPixmap("resources/SYT.png")
         if not logo_pixmap.isNull():
-            # 缩放 logo 到合适大小
-            scaled_pixmap = logo_pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            scaled_pixmap = logo_pixmap.scaled(36, 36, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
             logo_label.setStyleSheet("background-color: transparent; padding: 0px;")
             top_layout.addWidget(logo_label)
@@ -252,7 +249,7 @@ class HotkeyManagerQt(QMainWindow):
         self.status_indicator = QLabel("●")
         self.status_indicator.setStyleSheet("""
             color: #EF4444;
-            font-size: 20px;
+            font-size: 18px;
             background-color: transparent;
         """)
         status_layout.addWidget(self.status_indicator)
@@ -261,11 +258,11 @@ class HotkeyManagerQt(QMainWindow):
         status_text_layout.setSpacing(2)
         
         status_title = QLabel("状态")
-        status_title.setStyleSheet("color: #64748B; font-size: 11px; background-color: transparent;")
+        status_title.setStyleSheet("color: #64748B; font-size: 11px; background-color: transparent; font-weight: 500;")
         status_text_layout.addWidget(status_title)
         
         self.status_label = QLabel("未启动")
-        self.status_label.setStyleSheet("color: #F1F5F9; font-weight: 600; font-size: 14px; background-color: transparent;")
+        self.status_label.setStyleSheet("color: #1E293B; font-weight: 600; font-size: 14px; background-color: transparent;")
         status_text_layout.addWidget(self.status_label)
         
         status_layout.addLayout(status_text_layout)
@@ -273,7 +270,7 @@ class HotkeyManagerQt(QMainWindow):
         
         # 分隔线
         separator = QLabel("|")
-        separator.setStyleSheet("color: rgba(148, 163, 184, 0.3); font-size: 20px; background-color: transparent;")
+        separator.setStyleSheet("color: #E2E8F0; font-size: 20px; background-color: transparent;")
         top_layout.addWidget(separator)
         
         # 进程计数器
@@ -284,39 +281,36 @@ class HotkeyManagerQt(QMainWindow):
         process_layout.setSpacing(2)
         
         process_title = QLabel("运行中程序")
-        process_title.setStyleSheet("color: #64748B; font-size: 11px; background-color: transparent;")
+        process_title.setStyleSheet("color: #64748B; font-size: 11px; background-color: transparent; font-weight: 500;")
         process_layout.addWidget(process_title)
         
         self.process_label = QLabel("0")
-        self.process_label.setStyleSheet("color: #F1F5F9; font-weight: 600; font-size: 14px; background-color: transparent;")
+        self.process_label.setStyleSheet("color: #1E293B; font-weight: 600; font-size: 14px; background-color: transparent;")
         process_layout.addWidget(self.process_label)
         
         top_layout.addWidget(process_widget)
         
         top_layout.addStretch()
         
-        # 启动按钮 - 渐变样式
+        # 启动按钮 - 蓝色实心
         self.start_btn = QPushButton("启动监听")
         self.start_btn.clicked.connect(self.toggle_monitoring)
         self.start_btn.setMinimumHeight(44)
         self.start_btn.setStyleSheet("""
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #3B82F6, stop:1 #2563EB);
+                background-color: #3B82F6;
                 color: white;
                 border: none;
                 padding: 12px 28px;
-                border-radius: 10px;
+                border-radius: 8px;
                 font-weight: 600;
                 font-size: 14px;
             }
             QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #2563EB, stop:1 #1D4ED8);
+                background-color: #2563EB;
             }
             QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #1E40AF, stop:1 #1E3A8A);
+                background-color: #1D4ED8;
             }
         """)
         top_layout.addWidget(self.start_btn)
@@ -324,13 +318,13 @@ class HotkeyManagerQt(QMainWindow):
         top_container_layout.addLayout(top_layout)
         main_layout.addWidget(top_container)
         
-        # 添加快捷键区域 - 玻璃态卡片
+        # 添加快捷键区域 - 白色卡片
         add_container = QWidget()
         add_container.setStyleSheet("""
             QWidget {
-                background-color: rgba(30, 41, 59, 0.5);
-                border: 1px solid rgba(148, 163, 184, 0.15);
-                border-radius: 16px;
+                background-color: #FFFFFF;
+                border: 1.5px solid #E2E8F0;
+                border-radius: 12px;
             }
         """)
         add_layout = QVBoxLayout(add_container)
@@ -341,7 +335,7 @@ class HotkeyManagerQt(QMainWindow):
         add_label.setStyleSheet("""
             font-size: 16px;
             font-weight: 600;
-            color: #F1F5F9;
+            color: #1E293B;
             background-color: transparent;
         """)
         add_layout.addWidget(add_label)
@@ -351,7 +345,7 @@ class HotkeyManagerQt(QMainWindow):
         hotkey_layout.setSpacing(14)
         
         hotkey_label = QLabel("快捷键")
-        hotkey_label.setStyleSheet("color: #94A3B8; min-width: 80px; font-weight: 500; background-color: transparent;")
+        hotkey_label.setStyleSheet("color: #64748B; min-width: 80px; font-weight: 500; background-color: transparent;")
         hotkey_layout.addWidget(hotkey_label)
         
         self.hotkey_input = HotkeyRecorder()
@@ -365,7 +359,7 @@ class HotkeyManagerQt(QMainWindow):
         path_layout.setSpacing(14)
         
         path_label = QLabel("目标路径")
-        path_label.setStyleSheet("color: #94A3B8; min-width: 80px; font-weight: 500; background-color: transparent;")
+        path_label.setStyleSheet("color: #64748B; min-width: 80px; font-weight: 500; background-color: transparent;")
         path_layout.addWidget(path_label)
         
         self.path_input = QLineEdit()
@@ -378,14 +372,15 @@ class HotkeyManagerQt(QMainWindow):
         browse_file_btn.setMinimumHeight(44)
         browse_file_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(71, 85, 105, 0.5);
-                border: 1px solid rgba(148, 163, 184, 0.2);
+                background-color: #F8FAFC;
+                border: 1.5px solid #E2E8F0;
+                color: #475569;
                 min-width: 110px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(100, 116, 139, 0.7);
-                border-color: rgba(148, 163, 184, 0.3);
+                background-color: #F1F5F9;
+                border-color: #CBD5E1;
             }
         """)
         path_layout.addWidget(browse_file_btn)
@@ -395,14 +390,15 @@ class HotkeyManagerQt(QMainWindow):
         browse_folder_btn.setMinimumHeight(44)
         browse_folder_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(71, 85, 105, 0.5);
-                border: 1px solid rgba(148, 163, 184, 0.2);
+                background-color: #F8FAFC;
+                border: 1.5px solid #E2E8F0;
+                color: #475569;
                 min-width: 120px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(100, 116, 139, 0.7);
-                border-color: rgba(148, 163, 184, 0.3);
+                background-color: #F1F5F9;
+                border-color: #CBD5E1;
             }
         """)
         path_layout.addWidget(browse_folder_btn)
@@ -418,22 +414,19 @@ class HotkeyManagerQt(QMainWindow):
         add_btn.setMinimumHeight(44)
         add_btn.setStyleSheet("""
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10B981, stop:1 #059669);
+                background-color: #10B981;
                 color: white;
                 border: none;
                 padding: 12px 24px;
-                border-radius: 10px;
+                border-radius: 8px;
                 font-weight: 600;
                 font-size: 14px;
             }
             QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #059669, stop:1 #047857);
+                background-color: #059669;
             }
             QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #047857, stop:1 #065F46);
+                background-color: #047857;
             }
         """)
         btn_layout.addWidget(add_btn)
@@ -444,16 +437,16 @@ class HotkeyManagerQt(QMainWindow):
         clear_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
-                border: 1px solid rgba(148, 163, 184, 0.3);
-                color: #94A3B8;
+                border: 1.5px solid #E2E8F0;
+                color: #64748B;
                 padding: 12px 24px;
-                border-radius: 10px;
+                border-radius: 8px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(71, 85, 105, 0.4);
-                color: #F1F5F9;
-                border-color: rgba(148, 163, 184, 0.4);
+                background-color: #F8FAFC;
+                color: #475569;
+                border-color: #CBD5E1;
             }
         """)
         btn_layout.addWidget(clear_btn)
@@ -468,7 +461,7 @@ class HotkeyManagerQt(QMainWindow):
         list_label.setStyleSheet("""
             font-size: 16px;
             font-weight: 600;
-            color: #F1F5F9;
+            color: #1E293B;
             margin-top: 4px;
             background-color: transparent;
         """)
@@ -492,20 +485,18 @@ class HotkeyManagerQt(QMainWindow):
             QPushButton {
                 background-color: transparent;
                 color: #EF4444;
-                border: 1px solid rgba(239, 68, 68, 0.4);
+                border: 1.5px solid #FCA5A5;
                 padding: 12px 24px;
-                border-radius: 10px;
+                border-radius: 8px;
                 font-weight: 600;
             }
             QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #EF4444, stop:1 #DC2626);
+                background-color: #EF4444;
                 color: white;
-                border-color: transparent;
+                border-color: #EF4444;
             }
             QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #DC2626, stop:1 #B91C1C);
+                background-color: #DC2626;
             }
         """)
         main_layout.addWidget(delete_btn)
@@ -523,11 +514,11 @@ class HotkeyManagerQt(QMainWindow):
         self.table.insertRow(row)
         
         hotkey_item = QTableWidgetItem(hotkey)
-        hotkey_item.setForeground(Qt.white)
+        hotkey_item.setForeground(Qt.black)
         self.table.setItem(row, 0, hotkey_item)
         
         path_item = QTableWidgetItem(path)
-        path_item.setForeground(Qt.white)
+        path_item.setForeground(Qt.black)
         self.table.setItem(row, 1, path_item)
         
         delete_btn = QPushButton("删除")
@@ -535,16 +526,16 @@ class HotkeyManagerQt(QMainWindow):
         delete_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
-                color: #F87171;
-                border: 1px solid rgba(248, 113, 113, 0.3);
+                color: #EF4444;
+                border: 1.5px solid #FCA5A5;
                 padding: 6px 18px;
                 border-radius: 6px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: rgba(239, 68, 68, 0.2);
-                color: #EF4444;
-                border-color: rgba(239, 68, 68, 0.5);
+                background-color: #FEF2F2;
+                color: #DC2626;
+                border-color: #EF4444;
             }
         """)
         self.table.setCellWidget(row, 2, delete_btn)
@@ -654,27 +645,24 @@ class HotkeyManagerQt(QMainWindow):
                 self.start_btn.setText("停止监听")
                 self.start_btn.setStyleSheet("""
                     QPushButton {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 #EF4444, stop:1 #DC2626);
+                        background-color: #EF4444;
                         color: white;
                         border: none;
                         padding: 12px 28px;
-                        border-radius: 10px;
+                        border-radius: 8px;
                         font-weight: 600;
                         font-size: 14px;
                     }
                     QPushButton:hover {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 #DC2626, stop:1 #B91C1C);
+                        background-color: #DC2626;
                     }
                     QPushButton:pressed {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 #B91C1C, stop:1 #991B1B);
+                        background-color: #B91C1C;
                     }
                 """)
                 self.status_label.setText("运行中")
-                self.status_label.setStyleSheet("color: #F1F5F9; font-weight: 600; font-size: 14px; background-color: transparent;")
-                self.status_indicator.setStyleSheet("color: #10B981; font-size: 20px; background-color: transparent;")
+                self.status_label.setStyleSheet("color: #1E293B; font-weight: 600; font-size: 14px; background-color: transparent;")
+                self.status_indicator.setStyleSheet("color: #10B981; font-size: 18px; background-color: transparent;")
                 self.logger.info("启动监听")
                 QMessageBox.information(self, "成功", "快捷键监听已启动\n\n提示: 如果快捷键无响应，请确保以管理员身份运行程序")
             except Exception as e:
@@ -687,27 +675,24 @@ class HotkeyManagerQt(QMainWindow):
                 self.start_btn.setText("启动监听")
                 self.start_btn.setStyleSheet("""
                     QPushButton {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 #3B82F6, stop:1 #2563EB);
+                        background-color: #3B82F6;
                         color: white;
                         border: none;
                         padding: 12px 28px;
-                        border-radius: 10px;
+                        border-radius: 8px;
                         font-weight: 600;
                         font-size: 14px;
                     }
                     QPushButton:hover {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 #2563EB, stop:1 #1D4ED8);
+                        background-color: #2563EB;
                     }
                     QPushButton:pressed {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 #1E40AF, stop:1 #1E3A8A);
+                        background-color: #1D4ED8;
                     }
                 """)
                 self.status_label.setText("未启动")
-                self.status_label.setStyleSheet("color: #F1F5F9; font-weight: 600; font-size: 14px; background-color: transparent;")
-                self.status_indicator.setStyleSheet("color: #EF4444; font-size: 20px; background-color: transparent;")
+                self.status_label.setStyleSheet("color: #1E293B; font-weight: 600; font-size: 14px; background-color: transparent;")
+                self.status_indicator.setStyleSheet("color: #EF4444; font-size: 18px; background-color: transparent;")
                 self.logger.info("停止监听")
                 QMessageBox.information(self, "成功", "快捷键监听已停止")
             except Exception as e:

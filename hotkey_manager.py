@@ -170,42 +170,30 @@ class HotkeyManager:
                 self.logger.error(f"目标不存在: {target_path}")
                 return
             
-            # 规范化程序路径用于比较
-            normalized_path = path.resolve()
-
-            # 首先检查我们监控的进程列表
-            for proc in self.running_processes:
-                try:
-                    if proc.is_running():
-                        proc_exe = Path(proc.exe()).resolve()
-                        if proc_exe == normalized_path:
-                            self.logger.info(f"程序已在监控列表中运行: {normalized_path.name} (PID: {proc.pid})")
-                            return
-                except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
-                    continue
-
-            # 检查系统中是否有相同路径的程序在运行
-            for proc in psutil.process_iter(['exe']):
-                try:
-                    if proc.info['exe']:
-                        proc_exe = Path(proc.info['exe']).resolve()
-                        if proc_exe == normalized_path:
-                            self.logger.info(f"程序已在系统中运行: {normalized_path.name} (PID: {proc.pid})")
-                            # 将已存在的进程添加到监控列表
-                            ps_process = psutil.Process(proc.pid)
-                            if ps_process not in self.running_processes:
-                                self.running_processes.append(ps_process)
-                            return
-                except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
-                    continue
-
-            # 启动程序
+            # 直接启动程序，不做防重复检测（用户可能需要多个实例）
             import os
             os.startfile(target_path)
             self.logger.info(f"启动程序: {target_path}")
             
-            # 等待进程启动
-            time.sleep(0.5)
+            # 等待进程启动并添加到监控列表
+            time.sleep(0.8)
+            
+            # 尝试找到新启动的进程
+            normalized_path = path.resolve()
+            for proc in psutil.process_iter(['exe', 'create_time']):
+                try:
+                    if proc.info['exe']:
+                        proc_exe = Path(proc.info['exe']).resolve()
+                        if proc_exe == normalized_path:
+                            # 检查进程是否是最近启动的（5秒内）
+                            if time.time() - proc.create_time() < 5:
+                                ps_process = psutil.Process(proc.pid)
+                                if ps_process not in self.running_processes:
+                                    self.running_processes.append(ps_process)
+                                    self.logger.info(f"已添加到监控列表: {normalized_path.name} (PID: {proc.pid})")
+                                break
+                except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+                    continue
 
         except Exception as e:
             self.logger.error(f"启动失败: {e}")
