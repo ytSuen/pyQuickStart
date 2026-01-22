@@ -594,7 +594,7 @@ class HotkeyManagerQt(QMainWindow):
         header_layout.addWidget(self.sleep_btn)
         
         # 启动按钮
-        self.start_btn = QPushButton("启动监听")
+        self.start_btn = QPushButton("启动快捷键")
         self.start_btn.clicked.connect(self.toggle_monitoring)
         self.start_btn.setMinimumHeight(44)
         self.start_btn.setProperty("variant", "primary")
@@ -906,7 +906,7 @@ class HotkeyManagerQt(QMainWindow):
                     return
                 
                 self.is_monitoring = True
-                self.start_btn.setText("停止监听")
+                self.start_btn.setText("停止快捷键")
                 self.start_btn.setProperty("variant", "danger")
                 self.start_btn.setProperty("size", "xl")
                 self.refresh_widget_style(self.start_btn)
@@ -918,7 +918,7 @@ class HotkeyManagerQt(QMainWindow):
                 
                 # 不再自动启动防休眠，由用户手动控制
                 self.logger.info("启动监听")
-                QMessageBox.information(self, "成功", "快捷键监听已启动\n\n提示: 如果快捷键无响应，请确保以管理员身份运行程序")
+                QMessageBox.information(self, "成功", "快捷键已启动\n\n提示: 如果快捷键无响应，请确保以管理员身份运行程序")
             except Exception as e:
                 QMessageBox.critical(self, "失败", f"启动失败: {e}")
         else:
@@ -926,7 +926,7 @@ class HotkeyManagerQt(QMainWindow):
                 self.hotkey_manager.stop()
                 # 不再自动关闭防休眠，由用户手动控制
                 self.is_monitoring = False
-                self.start_btn.setText("启动监听")
+                self.start_btn.setText("启动快捷键")
                 self.start_btn.setProperty("variant", "primary")
                 self.start_btn.setProperty("size", "md")
                 self.refresh_widget_style(self.start_btn)
@@ -938,7 +938,7 @@ class HotkeyManagerQt(QMainWindow):
                 
                 # 不再自动关闭防休眠，由用户手动控制
                 self.logger.info("停止监听")
-                QMessageBox.information(self, "成功", "快捷键监听已停止")
+                QMessageBox.information(self, "成功", "快捷键已停止")
             except Exception as e:
                 QMessageBox.critical(self, "失败", f"停止失败: {e}")
     
