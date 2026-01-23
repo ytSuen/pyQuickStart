@@ -7,13 +7,14 @@ import sys
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QPushButton, QTableWidget, 
                              QTableWidgetItem, QFileDialog, QMessageBox, QHeaderView,
-                             QSystemTrayIcon, QMenu, QAction)
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+                             QSystemTrayIcon, QMenu, QAction, QProgressDialog)
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QThread, pyqtSignal as Signal
 from PyQt5.QtGui import QKeySequence, QIcon, QPixmap
 from hotkey_manager import HotkeyManager
 from power_manager import PowerManager
 from config_manager import ConfigManager
 from logger import Logger
+from updater import Updater
 import keyboard as kb
 
 
@@ -112,6 +113,27 @@ class HotkeyRecorder(QLineEdit):
         super().focusInEvent(event)
 
 
+class UpdateCheckThread(QThread):
+    """更新检查线程"""
+    update_found = Signal(dict)
+    no_update = Signal()
+    error = Signal(str)
+    
+    def __init__(self, updater):
+        super().__init__()
+        self.updater = updater
+    
+    def run(self):
+        try:
+            has_update, version_info = self.updater.check_update()
+            if has_update:
+                self.update_found.emit(version_info)
+            else:
+                self.no_update.emit()
+        except Exception as e:
+            self.error.emit(str(e))
+
+
 class HotkeyManagerQt(QMainWindow):
     """PyQt5 主窗口"""
     
@@ -121,6 +143,7 @@ class HotkeyManagerQt(QMainWindow):
         self.power_manager = PowerManager()
         self.config_manager = ConfigManager()
         self.logger = Logger()
+        self.updater = Updater()
         self.is_monitoring = False
         self.sleep_prevention_enabled = False  # 防休眠独立状态
         
@@ -146,6 +169,9 @@ class HotkeyManagerQt(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_status)
         self.timer.start(2000)
+        
+        # 启动时检查更新（延迟3秒）
+        QTimer.singleShot(3000, self.check_for_updates)
 
     def build_stylesheet(self):
         return """
@@ -601,6 +627,15 @@ class HotkeyManagerQt(QMainWindow):
         self.start_btn.setProperty("size", "md")
         header_layout.addWidget(self.start_btn)
         
+        # 检查更新按钮
+        update_btn = QPushButton("🔄 检查更新")
+        update_btn.clicked.connect(self.check_for_updates)
+        update_btn.setMinimumHeight(44)
+        update_btn.setProperty("variant", "soft")
+        update_btn.setProperty("size", "sm")
+        update_btn.setToolTip(f"当前版本: v{self.updater.get_current_version()}")
+        header_layout.addWidget(update_btn)
+        
         main_layout.addWidget(header_container)
 
         self.refresh_widget_style(header_container)
@@ -963,3 +998,94 @@ class HotkeyManagerQt(QMainWindow):
         if self.is_monitoring:
             self.hotkey_manager.stop()
         event.accept()
+    
+    def check_for_updates(self):
+        """检查更新"""
+        self.logger.info("用户手动检查更新")
+        
+        # 创建进度对话框
+        progress = QMessageBox(self)
+        progress.setWindowTitle("检查更新")
+        progress.setText("正在检查更新...")
+        progress.setStandardButtons(QMessageBox.NoButton)
+        progress.show()
+        
+        # 创建检查线程
+        self.update_thread = UpdateCheckThread(self.updater)
+        self.update_thread.update_found.connect(lambda info: self._on_update_found(info, progress))
+        self.update_thread.no_update.connect(lambda: self._on_no_update(progress))
+        self.update_thread.error.connect(lambda err: self._on_update_error(err, progress))
+        self.update_thread.start()
+    
+    def _on_update_found(self, version_info: dict, progress_dialog):
+        """发现更新"""
+        progress_dialog.close()
+        
+        version = version_info.get('version', 'Unknown')
+        changelog = version_info.get('changelog', '无更新说明')
+        
+        msg = f"发现新版本: v{version}\n\n"
+        msg += f"当前版本: v{self.updater.get_current_version()}\n\n"
+        msg += f"更新内容:\n{changelog}\n\n"
+        msg += "是否立即下载并更新？"
+        
+        reply = QMessageBox.question(
+            self, "发现新版本", msg,
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            self._download_and_install(version_info)
+    
+    def _on_no_update(self, progress_dialog):
+        """没有更新"""
+        progress_dialog.close()
+        QMessageBox.information(
+            self, "检查更新",
+            f"当前已是最新版本 v{self.updater.get_current_version()}"
+        )
+    
+    def _on_update_error(self, error: str, progress_dialog):
+        """更新检查错误"""
+        progress_dialog.close()
+        QMessageBox.warning(
+            self, "检查更新失败",
+            f"无法检查更新，请稍后重试\n\n错误: {error}"
+        )
+    
+    def _download_and_install(self, version_info: dict):
+        """下载并安装更新"""
+        # 创建进度对话框
+        progress = QProgressDialog("正在下载更新...", "取消", 0, 100, self)
+        progress.setWindowTitle("下载更新")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+        
+        def update_progress(downloaded, total):
+            if total > 0:
+                percent = int((downloaded / total) * 100)
+                progress.setValue(percent)
+                progress.setLabelText(f"正在下载更新... {downloaded // 1024} KB / {total // 1024} KB")
+        
+        # 下载更新
+        success, result = self.updater.download_update(version_info, update_progress)
+        progress.close()
+        
+        if not success:
+            QMessageBox.critical(self, "下载失败", f"下载更新失败\n\n{result}")
+            return
+        
+        # 应用更新
+        new_exe_path = result
+        success, msg = self.updater.apply_update(new_exe_path)
+        
+        if success:
+            QMessageBox.information(
+                self, "更新成功",
+                "更新将在程序重启后生效\n\n程序即将自动重启..."
+            )
+            # 退出程序，更新脚本会自动重启
+            self.exit_app()
+        else:
+            QMessageBox.critical(self, "更新失败", f"应用更新失败\n\n{msg}")
