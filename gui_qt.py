@@ -170,8 +170,7 @@ class HotkeyManagerQt(QMainWindow):
         self.timer.timeout.connect(self.update_status)
         self.timer.start(2000)
         
-        # 启动时检查更新（延迟3秒）
-        QTimer.singleShot(3000, self.check_for_updates)
+        # 不再自动检查更新，改为用户手动点击
 
     def build_stylesheet(self):
         return """
@@ -501,10 +500,39 @@ class HotkeyManagerQt(QMainWindow):
             self.toggle_window_visibility()
 
     def exit_app(self):
+        """完全退出应用程序"""
         self._is_quitting = True
+        self.logger.info("用户退出应用程序")
+        
+        # 停止快捷键监听
+        if self.is_monitoring:
+            try:
+                self.hotkey_manager.stop()
+                self.logger.info("已停止快捷键监听")
+            except Exception as e:
+                self.logger.error(f"停止快捷键监听失败: {e}")
+        
+        # 关闭防休眠
+        if self.sleep_prevention_enabled:
+            try:
+                self.power_manager.allow_sleep()
+                self.logger.info("已关闭防休眠")
+            except Exception as e:
+                self.logger.error(f"关闭防休眠失败: {e}")
+        
+        # 隐藏托盘图标
         if self.tray_icon is not None:
             self.tray_icon.hide()
+        
+        # 关闭窗口
         self.close()
+        
+        # 强制退出应用程序
+        QApplication.quit()
+        
+        # 确保进程完全退出
+        import sys
+        sys.exit(0)
     
     def create_stat_card(self, title, value, bg_color, icon_color):
         """创建统计卡片"""
@@ -627,13 +655,18 @@ class HotkeyManagerQt(QMainWindow):
         self.start_btn.setProperty("size", "md")
         header_layout.addWidget(self.start_btn)
         
-        # 检查更新按钮
-        update_btn = QPushButton("🔄 检查更新")
+        # 检查更新按钮（只显示图标，放在右上角）
+        update_btn = QPushButton("🔄")
         update_btn.clicked.connect(self.check_for_updates)
-        update_btn.setMinimumHeight(44)
+        update_btn.setFixedSize(44, 44)  # 固定大小，正方形
         update_btn.setProperty("variant", "soft")
-        update_btn.setProperty("size", "sm")
-        update_btn.setToolTip(f"当前版本: v{self.updater.get_current_version()}")
+        update_btn.setToolTip(f"检查更新\n当前版本: v{self.updater.get_current_version()}")
+        update_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 18px;
+                border-radius: 22px;
+            }
+        """)
         header_layout.addWidget(update_btn)
         
         main_layout.addWidget(header_container)
@@ -990,24 +1023,55 @@ class HotkeyManagerQt(QMainWindow):
     
     def closeEvent(self, event):
         """关闭事件"""
-        self.logger.info("窗口关闭")
+        self.logger.info("窗口关闭事件触发")
+        
+        # 如果不是真正退出，只是最小化到托盘
         if not self._is_quitting and self.tray_icon is not None:
+            self.logger.info("最小化到托盘")
             self.hide()
             event.ignore()
             return
+        
+        # 真正退出时，清理资源
+        self.logger.info("执行退出清理")
+        
+        # 停止快捷键监听
         if self.is_monitoring:
-            self.hotkey_manager.stop()
+            try:
+                self.hotkey_manager.stop()
+            except Exception as e:
+                self.logger.error(f"停止快捷键监听失败: {e}")
+        
+        # 关闭防休眠
+        if self.sleep_prevention_enabled:
+            try:
+                self.power_manager.allow_sleep()
+            except Exception as e:
+                self.logger.error(f"关闭防休眠失败: {e}")
+        
+        self.logger.info("程序已完全退出")
         event.accept()
     
     def check_for_updates(self):
         """检查更新"""
         self.logger.info("用户手动检查更新")
         
-        # 创建进度对话框
+        # 创建可关闭的进度对话框
         progress = QMessageBox(self)
         progress.setWindowTitle("检查更新")
         progress.setText("正在检查更新...")
-        progress.setStandardButtons(QMessageBox.NoButton)
+        progress.setStandardButtons(QMessageBox.Cancel)  # 添加取消按钮
+        progress.setDefaultButton(QMessageBox.Cancel)
+        
+        # 标记是否已取消
+        self.update_cancelled = False
+        
+        def on_cancel():
+            self.update_cancelled = True
+            progress.close()
+            self.logger.info("用户取消检查更新")
+        
+        progress.buttonClicked.connect(on_cancel)
         progress.show()
         
         # 创建检查线程
@@ -1019,6 +1083,9 @@ class HotkeyManagerQt(QMainWindow):
     
     def _on_update_found(self, version_info: dict, progress_dialog):
         """发现更新"""
+        if self.update_cancelled:
+            return
+        
         progress_dialog.close()
         
         version = version_info.get('version', 'Unknown')
@@ -1039,6 +1106,9 @@ class HotkeyManagerQt(QMainWindow):
     
     def _on_no_update(self, progress_dialog):
         """没有更新"""
+        if self.update_cancelled:
+            return
+        
         progress_dialog.close()
         QMessageBox.information(
             self, "检查更新",
@@ -1047,11 +1117,22 @@ class HotkeyManagerQt(QMainWindow):
     
     def _on_update_error(self, error: str, progress_dialog):
         """更新检查错误"""
+        if self.update_cancelled:
+            return
+        
         progress_dialog.close()
-        QMessageBox.warning(
-            self, "检查更新失败",
-            f"无法检查更新，请稍后重试\n\n错误: {error}"
-        )
+        
+        # 如果是网络错误，提示用户
+        if "网络" in error or "timeout" in error.lower() or "connection" in error.lower():
+            QMessageBox.warning(
+                self, "网络连接失败",
+                "无法连接到更新服务器\n\n请检查网络连接后重试"
+            )
+        else:
+            QMessageBox.warning(
+                self, "检查更新失败",
+                f"无法检查更新\n\n错误: {error}"
+            )
     
     def _download_and_install(self, version_info: dict):
         """下载并安装更新"""
