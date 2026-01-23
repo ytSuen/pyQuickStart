@@ -30,6 +30,12 @@ class HotkeyRecorder(QLineEdit):
         super().__init__()
         self.setPlaceholderText("点击此处，然后按下快捷键组合")
         self.setFocusPolicy(Qt.StrongFocus)
+        # 设置字体为大写加粗
+        from PyQt5.QtGui import QFont
+        font = QFont()
+        font.setBold(True)
+        font.setCapitalization(QFont.AllUppercase)
+        self.setFont(font)
         
     def keyPressEvent(self, event):
         """按键按下事件"""
@@ -98,11 +104,11 @@ class HotkeyRecorder(QLineEdit):
             event.ignore()
             return
         
-        # 构建快捷键字符串
+        # 构建快捷键字符串（转为大写）
         if modifiers:
-            hotkey = '+'.join(modifiers + [key_name])
+            hotkey = '+'.join(modifiers + [key_name]).upper()
         else:
-            hotkey = key_name
+            hotkey = key_name.upper()
         
         self.setText(hotkey)
         event.accept()
@@ -827,6 +833,44 @@ class HotkeyManagerQt(QMainWindow):
         self.table.setAlternatingRowColors(False)
         main_layout.addWidget(self.table)
         
+        # 底部信息栏
+        footer_layout = QHBoxLayout()
+        footer_layout.setContentsMargins(4, 8, 4, 8)
+        
+        # 版本号
+        version_label = QLabel(f"版本: v{self.updater.get_current_version()}")
+        version_label.setStyleSheet("""
+            QLabel {
+                color: #94A3B8;
+                font-size: 12px;
+                background-color: transparent;
+            }
+        """)
+        footer_layout.addWidget(version_label)
+        
+        footer_layout.addStretch()
+        
+        # 发布者信息按钮
+        publisher_btn = QPushButton("发布者信息")
+        publisher_btn.clicked.connect(self.show_publisher_info)
+        publisher_btn.setCursor(Qt.PointingHandCursor)
+        publisher_btn.setStyleSheet("""
+            QPushButton {
+                color: #3B82F6;
+                font-size: 12px;
+                background-color: transparent;
+                border: none;
+                text-decoration: underline;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                color: #2563EB;
+            }
+        """)
+        footer_layout.addWidget(publisher_btn)
+        
+        main_layout.addLayout(footer_layout)
+        
     def load_config(self):
         """加载配置"""
         hotkeys = self.config_manager.get_hotkeys()
@@ -850,6 +894,11 @@ class HotkeyManagerQt(QMainWindow):
         self.table.setRowHeight(row, 60)  # 设置行高
         
         hotkey_item = QTableWidgetItem(hotkey)
+        # 设置快捷键列为大写加粗
+        from PyQt5.QtGui import QFont
+        font = QFont()
+        font.setBold(True)
+        hotkey_item.setFont(font)
         self.table.setItem(row, 0, hotkey_item)
         
         path_item = QTableWidgetItem(path)
@@ -1116,6 +1165,117 @@ class HotkeyManagerQt(QMainWindow):
         
         # 防休眠状态由用户手动控制，不再自动切换
     
+    def show_publisher_info(self):
+        """显示发布者信息"""
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+        from PyQt5.QtWidgets import QApplication
+        
+        # 创建对话框
+        dialog = QDialog(self)
+        dialog.setWindowTitle("发布者信息")
+        dialog.setFixedSize(450, 140)
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: white;
+            }
+        """)
+        
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(30, 20, 30, 20)
+        layout.setSpacing(16)
+        
+        # 邮箱信息容器（删除了标题，直接显示邮箱）
+        email_container = QWidget()
+        email_container.setStyleSheet("""
+            QWidget {
+                background-color: #F1F5F9;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+            }
+        """)
+        email_container_layout = QVBoxLayout(email_container)
+        email_container_layout.setContentsMargins(16, 14, 16, 14)
+        
+        email_text = "sytao_2020@petalmail.com"
+        email_label = QLabel(f"邮箱: {email_text}")
+        email_label.setStyleSheet("""
+            QLabel {
+                font-size: 15px;
+                color: #0F172A;
+                background-color: transparent;
+                border: none;
+                font-family: 'Consolas', 'Monaco', monospace;
+            }
+        """)
+        email_label.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        email_container_layout.addWidget(email_label)
+        
+        layout.addWidget(email_container)
+        
+        # 按钮区域
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(12)
+        
+        btn_layout.addStretch()
+        
+        # 复制按钮
+        copy_btn = QPushButton("📋 复制邮箱")
+        copy_btn.setMinimumHeight(38)
+        copy_btn.setMinimumWidth(120)
+        copy_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 20px;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;
+            }
+        """)
+        
+        def copy_email():
+            clipboard = QApplication.clipboard()
+            clipboard.setText(email_text)
+            copy_btn.setText("✓ 已复制")
+            QTimer.singleShot(1500, lambda: copy_btn.setText("📋 复制邮箱"))
+        
+        copy_btn.clicked.connect(copy_email)
+        btn_layout.addWidget(copy_btn)
+        
+        # 关闭按钮
+        close_btn = QPushButton("关闭")
+        close_btn.setMinimumHeight(38)
+        close_btn.setMinimumWidth(100)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                color: #475569;
+                border: 1.5px solid #E2E8F0;
+                border-radius: 6px;
+                padding: 8px 20px;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #F8FAFC;
+                border-color: #CBD5E1;
+            }
+        """)
+        close_btn.clicked.connect(dialog.close)
+        btn_layout.addWidget(close_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        # 显示对话框
+        dialog.exec_()
+    
     def closeEvent(self, event):
         """关闭事件"""
         self.logger.info("窗口关闭事件触发")
@@ -1205,9 +1365,10 @@ class HotkeyManagerQt(QMainWindow):
             return
         
         progress_dialog.close()
+        current_version = self.updater.get_current_version()
         QMessageBox.information(
             self, "检查更新",
-            f"当前已是最新版本 v{self.updater.get_current_version()}"
+            f"当前已是最新版本 v{current_version}"
         )
     
     def _on_update_error(self, error: str, progress_dialog):

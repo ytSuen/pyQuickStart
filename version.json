@@ -1,5 +1,7 @@
 {
-  "version": "1.3.0",
+  "version": "2.0.0",
   "build_date": "2026-01-23",
-  "description": "新增可配置防护强度，智能鼠标移动，锁屏状态检测"
+  "description": "重大更新：快捷键大写加粗显示，优化发布者信息展示，修复版本检查显示问题",
+  "changelog": "重大更新：快捷键大写加粗显示，优化发布者信息展示，修复版本检查显示问题",
+  "download_url": "https://gitee.com/sytao_2020/pyQuickStart/releases/download/v2.0.0/pyQuickStart.exe"
 }
