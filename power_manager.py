@@ -156,16 +156,16 @@ class PowerManager:
     def _simulate_key_press(self):
         """模拟鼠标小范围移动 - 规避锁屏"""
         try:
-            # 方法1：使用 mouse_event 移动鼠标（小范围移动，规避锁屏）
-            # 移动1像素然后移回，用户几乎感觉不到
+            # 方法1：使用 mouse_event 移动鼠标（增大移动范围，规避锁屏）
+            # 移动20像素然后移回，确保能触发系统活动检测
             try:
                 if hasattr(ctypes, "windll"):
-                    # 向右移动1像素
-                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, 1, 0, 0, 0)
-                    time.sleep(0.01)  # 10毫秒延迟
-                    # 向左移回1像素
-                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, -1, 0, 0, 0)
-                    self.logger.debug("已执行鼠标小范围移动（1像素往返）")
+                    # 向右移动20像素
+                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, 20, 0, 0, 0)
+                    time.sleep(0.05)  # 50毫秒延迟
+                    # 向左移回20像素
+                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, -20, 0, 0, 0)
+                    self.logger.debug("已执行鼠标移动（20像素往返）")
             except Exception as e:
                 self.logger.debug(f"鼠标移动失败: {e}")
             
@@ -186,7 +186,7 @@ class PowerManager:
             if func is not None:
                 func(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
             
-            self.logger.info("防休眠刷新完成 (鼠标移动 + 重置计时器 + 模拟按键 + 恢复状态)")
+            self.logger.info("防休眠刷新完成 (鼠标移动20px + 重置计时器 + 模拟按键 + 恢复状态)")
         except Exception as e:
             self.logger.error(f"防休眠刷新失败: {e}")
 

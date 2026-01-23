@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.2.1",
   "build_date": "2026-01-23",
-  "description": "初始版本"
+  "description": "增大鼠标移动范围到20像素，增强防锁屏效果"
 }
