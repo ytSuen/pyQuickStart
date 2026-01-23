@@ -13,6 +13,10 @@ class ConfigManager:
         self.config_file = Path(config_file)
         self.logger = Logger()
         self.config: Dict = {}
+        self.default_config = {
+            "hotkeys": {},
+            "protection_level": "medium"
+        }
         self.load()
 
     def load(self):
@@ -23,11 +27,11 @@ class ConfigManager:
                     self.config = json.load(f)
                 self.logger.info(f"配置已加载: {len(self.config.get('hotkeys', {}))} 个快捷键")
             else:
-                self.config = {"hotkeys": {}}
+                self.config = self.default_config.copy()
                 self.logger.info("创建新配置文件")
         except Exception as e:
             self.logger.error(f"加载配置失败: {e}")
-            self.config = {"hotkeys": {}}
+            self.config = self.default_config.copy()
 
     def save(self):
         """保存配置文件"""
@@ -59,3 +63,16 @@ class ConfigManager:
         if "hotkeys" in self.config and hotkey in self.config["hotkeys"]:
             del self.config["hotkeys"][hotkey]
             self.save()
+
+    def get_protection_level(self) -> str:
+        """获取防护强度"""
+        return self.config.get("protection_level", "medium")
+
+    def set_protection_level(self, level: str):
+        """设置防护强度"""
+        if level not in ["light", "medium", "heavy"]:
+            self.logger.warning(f"无效的防护强度: {level}，使用默认值 medium")
+            level = "medium"
+        self.config["protection_level"] = level
+        self.save()
+        self.logger.info(f"防护强度已设置为: {level}")

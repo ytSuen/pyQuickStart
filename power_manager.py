@@ -37,7 +37,13 @@ class _ReasonContext(ctypes.Structure):
 
 
 class PowerManager:
-    def __init__(self):
+    # 防护强度枚举
+    class ProtectionLevel:
+        LIGHT = "light"      # 轻度：60秒，20像素
+        MEDIUM = "medium"    # 中度：30秒，50像素
+        HEAVY = "heavy"      # 重度：15秒，100像素
+    
+    def __init__(self, protection_level="medium"):
         self.logger = Logger()
         self.is_preventing_sleep = False
         self._keepalive_timer = None
@@ -46,6 +52,43 @@ class PowerManager:
         self._keyboard = Controller()
         self._keyboard_simulation_timer = None
         self._keyboard_simulation_interval = 30  # 每30秒刷新一次（确保在休眠前刷新）
+        self.protection_level = protection_level
+        self._mouse_movement_pixels = 20  # 默认鼠标移动像素
+        self._update_protection_settings()
+        # 锁屏检测相关
+        self._lock_count = 0
+        self._last_lock_time = None
+        # 错误跟踪
+        self._last_critical_error = None
+
+    def _update_protection_settings(self):
+        """根据防护强度更新设置"""
+        settings = {
+            "light": (60, 20),
+            "medium": (30, 50),
+            "heavy": (15, 100)
+        }
+        interval, pixels = settings.get(self.protection_level, (30, 50))
+        self._keyboard_simulation_interval = interval
+        self._mouse_movement_pixels = pixels
+        self.logger.debug(f"防护设置已更新: 强度={self.protection_level}, 间隔={interval}秒, 像素={pixels}px")
+    
+    def set_protection_level(self, level):
+        """设置防护强度"""
+        if level not in ["light", "medium", "heavy"]:
+            self.logger.warning(f"无效的防护强度: {level}，保持当前设置")
+            return False
+        
+        self.protection_level = level
+        self._update_protection_settings()
+        self.logger.info(f"防护强度已更改为: {level}")
+        
+        # 如果防护已启用，重新调度定时器
+        if self.is_preventing_sleep:
+            self._schedule_keyboard_simulation()
+            self.logger.info("防护已启用，重新调度定时器以应用新设置")
+        
+        return True
 
     def _get_set_thread_execution_state(self):
         if not hasattr(ctypes, "windll"):
@@ -153,42 +196,179 @@ class PowerManager:
             except Exception:
                 pass
 
+    def _move_mouse(self, pixels):
+        """执行鼠标移动"""
+        try:
+            if not hasattr(ctypes, "windll"):
+                error_msg = "鼠标移动失败: ctypes.windll不可用 (非Windows平台或ctypes未正确加载)"
+                self.logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            
+            try:
+                # 向右移动
+                ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, pixels, 0, 0, 0)
+                self.logger.debug(f"鼠标向右移动: {pixels}px")
+                time.sleep(0.01)  # 10毫秒延迟
+                # 向左移回
+                ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, -pixels, 0, 0, 0)
+                self.logger.debug(f"鼠标向左移回: {pixels}px")
+                self.logger.debug(f"鼠标移动完成: {pixels}px往返")
+            except (OSError, AttributeError, ctypes.ArgumentError) as e:
+                # 捕获ctypes特定异常
+                error_msg = f"鼠标移动失败 (像素: {pixels}px): ctypes API调用错误 - {type(e).__name__}: {e}"
+                self.logger.error(error_msg, exc_info=True)
+                raise RuntimeError(error_msg) from e
+        except RuntimeError:
+            # 重新抛出RuntimeError以触发降级
+            raise
+        except Exception as e:
+            # 捕获其他未预期的异常
+            error_msg = f"鼠标移动失败 (像素: {pixels}px): 未预期的错误 - {type(e).__name__}: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            raise RuntimeError(error_msg) from e
+    
+    def _reset_idle_timer(self):
+        """重置空闲计时器"""
+        func = self._get_set_thread_execution_state()
+        if func is not None:
+            result = func(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+            self.logger.debug(f"重置空闲计时器: SetThreadExecutionState API返回值={hex(result) if result else '0 (失败)'}")
+            return result
+        else:
+            self.logger.debug("重置空闲计时器: SetThreadExecutionState API不可用")
+            return None
+    
+    def _simulate_keyboard(self):
+        """模拟按键"""
+        self._keyboard.press(Key.shift)
+        time.sleep(0.001)
+        self._keyboard.release(Key.shift)
+        self.logger.debug("模拟按键完成: Shift")
+    
+    def _restore_continuous_state(self):
+        """恢复持续状态"""
+        func = self._get_set_thread_execution_state()
+        if func is not None:
+            result = func(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+            self.logger.debug(f"恢复持续状态: SetThreadExecutionState API返回值={hex(result) if result else '0 (失败)'}")
+            return result
+        else:
+            self.logger.debug("恢复持续状态: SetThreadExecutionState API不可用")
+            return None
+
     def _simulate_key_press(self):
         """模拟鼠标小范围移动 - 规避锁屏"""
+        # 记录防护强度和移动像素数
+        self.logger.debug(f"开始防护刷新 - 强度: {self.protection_level}, 移动像素: {self._mouse_movement_pixels}px, 间隔: {self._keyboard_simulation_interval}秒")
+        
+        # 跟踪各个方法的成功状态
+        methods_success = {
+            "mouse_movement": False,
+            "reset_idle_timer": False,
+            "simulate_keyboard": False,
+            "restore_continuous_state": False
+        }
+        
         try:
             # 方法1：使用 mouse_event 移动鼠标（增大移动范围，规避锁屏）
-            # 移动20像素然后移回，确保能触发系统活动检测
+            pixels = self._mouse_movement_pixels
+            self.logger.debug(f"步骤1: 执行鼠标移动 ({pixels}px)")
             try:
-                if hasattr(ctypes, "windll"):
-                    # 向右移动20像素
-                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, 20, 0, 0, 0)
-                    time.sleep(0.05)  # 50毫秒延迟
-                    # 向左移回20像素
-                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, -20, 0, 0, 0)
-                    self.logger.debug("已执行鼠标移动（20像素往返）")
+                self._move_mouse(pixels)
+                self.logger.debug(f"步骤1: 鼠标移动成功")
+                methods_success["mouse_movement"] = True
             except Exception as e:
-                self.logger.debug(f"鼠标移动失败: {e}")
+                self.logger.warning(f"步骤1: 鼠标移动失败，降级到其他方法: {e}")
             
             # 方法2：使用 SetThreadExecutionState 重置空闲计时器
-            func = self._get_set_thread_execution_state()
-            if func is not None:
-                # ES_SYSTEM_REQUIRED 会重置系统空闲计时器
-                # 不使用 ES_CONTINUOUS，让它只影响一次
-                result = func(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
-                self.logger.debug(f"重置空闲计时器 (返回值: {result})")
+            self.logger.debug(f"步骤2: 重置空闲计时器")
+            try:
+                result = self._reset_idle_timer()
+                if result:
+                    methods_success["reset_idle_timer"] = True
+            except Exception as e:
+                self.logger.warning(f"步骤2: 重置空闲计时器失败: {e}")
             
             # 方法3：模拟按键（三重保险）
-            self._keyboard.press(Key.shift)
-            time.sleep(0.001)  # 1毫秒延迟
-            self._keyboard.release(Key.shift)
+            self.logger.debug(f"步骤3: 模拟按键")
+            try:
+                self._simulate_keyboard()
+                methods_success["simulate_keyboard"] = True
+            except Exception as e:
+                self.logger.warning(f"步骤3: 模拟按键失败: {e}")
             
             # 方法4：恢复持续状态
-            if func is not None:
-                func(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+            self.logger.debug(f"步骤4: 恢复持续状态")
+            try:
+                result = self._restore_continuous_state()
+                if result:
+                    methods_success["restore_continuous_state"] = True
+            except Exception as e:
+                self.logger.warning(f"步骤4: 恢复持续状态失败: {e}")
             
-            self.logger.info("防休眠刷新完成 (鼠标移动20px + 重置计时器 + 模拟按键 + 恢复状态)")
+            # 检查是否所有方法都失败
+            if not any(methods_success.values()):
+                # 所有方法都失败
+                error_msg = (
+                    f"严重错误: 所有防护方法都失败！\n"
+                    f"防护强度: {self.protection_level}\n"
+                    f"失败的方法: 鼠标移动, 重置空闲计时器, 模拟按键, 恢复持续状态\n"
+                    f"故障排除建议:\n"
+                    f"1. 检查是否在虚拟机或远程桌面环境中运行\n"
+                    f"2. 确认程序具有足够的系统权限\n"
+                    f"3. 检查Windows版本兼容性\n"
+                    f"4. 查看日志文件获取详细错误信息\n"
+                    f"5. 尝试以管理员身份运行程序"
+                )
+                self.logger.critical(error_msg)
+                # 存储错误信息供GUI显示
+                self._last_critical_error = error_msg
+            else:
+                # 至少有一个方法成功
+                success_methods = [k for k, v in methods_success.items() if v]
+                self.logger.info(f"防锁屏刷新完成 (强度: {self.protection_level}, 成功方法: {', '.join(success_methods)})")
+                # 清除之前的错误信息
+                self._last_critical_error = None
+                
         except Exception as e:
-            self.logger.error(f"防休眠刷新失败: {e}")
+            # 捕获整个过程中的未预期异常
+            error_msg = f"防锁屏刷新过程发生严重错误: {type(e).__name__}: {e}"
+            self.logger.critical(error_msg, exc_info=True)
+            self._last_critical_error = error_msg
+    
+    def get_last_critical_error(self):
+        """获取最后一次严重错误信息（供GUI显示）"""
+        return getattr(self, '_last_critical_error', None)
+
+    def check_lock_state(self):
+        """检测系统是否锁屏"""
+        try:
+            if hasattr(ctypes, "windll"):
+                # 使用GetForegroundWindow检测
+                hwnd = ctypes.windll.user32.GetForegroundWindow()
+                if hwnd == 0:
+                    # 可能处于锁屏状态
+                    if self._last_lock_time is None:
+                        self._last_lock_time = time.time()
+                        self._lock_count += 1
+                        self.logger.warning(f"检测到可能的锁屏事件 (第{self._lock_count}次)")
+                    return True
+                else:
+                    if self._last_lock_time is not None:
+                        duration = time.time() - self._last_lock_time
+                        self.logger.info(f"从锁屏恢复，持续时间: {duration:.1f}秒")
+                        self._last_lock_time = None
+                    return False
+        except Exception as e:
+            self.logger.error(f"检测锁屏状态失败: {e}", exc_info=True)
+        return False
+    
+    def get_lock_statistics(self):
+        """获取锁屏统计信息"""
+        return {
+            "lock_count": self._lock_count,
+            "currently_locked": self._last_lock_time is not None
+        }
 
     def _cancel_keyboard_simulation(self):
         """取消键盘模拟定时器"""
@@ -272,7 +452,7 @@ class PowerManager:
                 self.logger.warning("PowerSetRequest 未生效/不可用，本次仅依赖 SetThreadExecutionState + 键盘模拟")
             return True
         except Exception as e:
-            self.logger.error(f"启用防休眠失败: {e}")
+            self.logger.error(f"启用防休眠失败 (防护强度: {self.protection_level}): {e}", exc_info=True)
             return False
 
     def allow_sleep(self):
@@ -304,7 +484,7 @@ class PowerManager:
                 self.logger.warning("PowerClearRequest 失败/不可用，但 SetThreadExecutionState 已恢复")
             return True
         except Exception as e:
-            self.logger.error(f"关闭防休眠失败: {e}")
+            self.logger.error(f"关闭防休眠失败 (防护强度: {self.protection_level}): {e}", exc_info=True)
             return False
 
     def __del__(self):

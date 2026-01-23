@@ -38,14 +38,18 @@ class Logger:
 
         self.logger = logging.getLogger(__name__)
 
-    def info(self, message: str):
-        self.logger.info(message)
+    def info(self, message: str, exc_info=False):
+        self.logger.info(message, exc_info=exc_info)
 
-    def warning(self, message: str):
-        self.logger.warning(message)
+    def warning(self, message: str, exc_info=False):
+        self.logger.warning(message, exc_info=exc_info)
 
-    def error(self, message: str):
-        self.logger.error(message)
+    def error(self, message: str, exc_info=False):
+        self.logger.error(message, exc_info=exc_info)
 
-    def debug(self, message: str):
-        self.logger.debug(message)
+    def debug(self, message: str, exc_info=False):
+        self.logger.debug(message, exc_info=exc_info)
+
+    def critical(self, message: str, exc_info=False):
+        self.logger.critical(message, exc_info=exc_info)
+

@@ -7,7 +7,7 @@ import sys
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QPushButton, QTableWidget, 
                              QTableWidgetItem, QFileDialog, QMessageBox, QHeaderView,
-                             QSystemTrayIcon, QMenu, QAction, QProgressDialog)
+                             QSystemTrayIcon, QMenu, QAction, QProgressDialog, QComboBox)
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QThread, pyqtSignal as Signal
 from PyQt5.QtGui import QKeySequence, QIcon, QPixmap
 from hotkey_manager import HotkeyManager
@@ -639,6 +639,64 @@ class HotkeyManagerQt(QMainWindow):
         
         header_layout.addWidget(status_container)
         
+        # 防护强度选择
+        protection_label = QLabel("防护强度:")
+        protection_label.setProperty("role", "fieldLabel")
+        header_layout.addWidget(protection_label)
+        
+        self.protection_combo = QComboBox()
+        self.protection_combo.addItems([
+            "轻度 (60秒/20px)",
+            "中度 (30秒/50px)",
+            "重度 (15秒/100px)"
+        ])
+        self.protection_combo.setCurrentIndex(1)  # 默认中度
+        self.protection_combo.setMinimumHeight(44)
+        self.protection_combo.setMinimumWidth(150)
+        self.protection_combo.currentIndexChanged.connect(self.on_protection_level_changed)
+        self.protection_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 10px 14px;
+                color: #1E293B;
+                font-size: 14px;
+            }
+            QComboBox:hover {
+                border: 1px solid #CBD5E1;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 30px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid #64748B;
+                margin-right: 10px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                selection-background-color: #F8FAFC;
+                selection-color: #1E293B;
+                padding: 4px;
+            }
+        """)
+        header_layout.addWidget(self.protection_combo)
+        
+        # 测试防锁屏按钮
+        test_btn = QPushButton("测试防锁屏")
+        test_btn.clicked.connect(self.test_screen_lock_prevention)
+        test_btn.setMinimumHeight(44)
+        test_btn.setProperty("variant", "soft")
+        test_btn.setProperty("size", "md")
+        test_btn.setToolTip("执行一次防护刷新并显示统计信息")
+        header_layout.addWidget(test_btn)
+        
         # 防休眠按钮
         self.sleep_btn = QPushButton("开启防休眠")
         self.sleep_btn.clicked.connect(self.toggle_sleep_prevention)
@@ -807,6 +865,15 @@ class HotkeyManagerQt(QMainWindow):
         for hotkey, path in hotkeys.items():
             self.hotkey_manager.add_hotkey(hotkey, path)
             self.add_table_row(hotkey, path)
+        
+        # 加载防护强度
+        protection_level = self.config_manager.get_protection_level()
+        level_index = {"light": 0, "medium": 1, "heavy": 2}.get(protection_level, 1)
+        self.protection_combo.setCurrentIndex(level_index)
+        
+        # 应用到PowerManager
+        self.power_manager.set_protection_level(protection_level)
+        self.logger.info(f"已加载防护强度配置: {protection_level}")
     
     def add_table_row(self, hotkey, path):
         """添加表格行"""
@@ -959,6 +1026,66 @@ class HotkeyManagerQt(QMainWindow):
             self.sleep_status_label.setProperty("state", "off")
             self.refresh_widget_style(self.sleep_status_label)
             self.logger.info("手动关闭防休眠")
+    
+    def on_protection_level_changed(self, index):
+        """防护强度改变"""
+        levels = ["light", "medium", "heavy"]
+        level = levels[index]
+        
+        # 保存配置到ConfigManager
+        self.config_manager.set_protection_level(level)
+        
+        # 应用新设置到PowerManager
+        success = self.power_manager.set_protection_level(level)
+        
+        if success:
+            level_names = {
+                "light": "轻度 (60秒/20px)",
+                "medium": "中度 (30秒/50px)",
+                "heavy": "重度 (15秒/100px)"
+            }
+            self.logger.info(f"防护强度已更改为: {level_names[level]}")
+            
+            # 如果防锁屏已启用，提示用户新设置已应用
+            if self.sleep_prevention_enabled:
+                QMessageBox.information(
+                    self, "设置已更新",
+                    f"防护强度已更改为: {level_names[level]}\n\n新设置将在下一个刷新周期生效"
+                )
+        else:
+            self.logger.error(f"防护强度更改失败: {level}")
+            QMessageBox.warning(self, "设置失败", "防护强度更改失败，请查看日志")
+    
+    def test_screen_lock_prevention(self):
+        """测试防锁屏功能"""
+        if not self.sleep_prevention_enabled:
+            QMessageBox.warning(self, "提示", "请先开启防休眠功能")
+            return
+        
+        # 执行一次防护刷新
+        self.power_manager._simulate_key_press()
+        
+        # 检查锁屏状态
+        is_locked = self.power_manager.check_lock_state()
+        stats = self.power_manager.get_lock_statistics()
+        
+        # 获取当前防护强度信息
+        level_names = {
+            "light": "轻度",
+            "medium": "中度",
+            "heavy": "重度"
+        }
+        level_name = level_names.get(self.power_manager.protection_level, "未知")
+        
+        msg = f"测试完成！\n\n"
+        msg += f"当前状态: {'锁屏' if is_locked else '未锁屏'}\n"
+        msg += f"锁屏次数: {stats['lock_count']}\n"
+        msg += f"防护强度: {level_name}\n"
+        msg += f"刷新间隔: {self.power_manager._keyboard_simulation_interval}秒\n"
+        msg += f"鼠标移动: {self.power_manager._mouse_movement_pixels}像素"
+        
+        QMessageBox.information(self, "测试结果", msg)
+        self.logger.info(f"测试防锁屏功能完成 - 强度: {level_name}, 锁屏次数: {stats['lock_count']}")
     
     def toggle_monitoring(self):
         """切换监听状态"""
