@@ -42,7 +42,7 @@ class PowerManager:
         self._power_request_handle = None
         self._keyboard = Controller()
         self._keyboard_simulation_timer = None
-        self._keyboard_simulation_interval = 60  # 每60秒模拟一次按键
+        self._keyboard_simulation_interval = 55  # 每55秒模拟一次按键（比60秒更频繁）
 
     def _get_set_thread_execution_state(self):
         if not hasattr(ctypes, "windll"):
@@ -151,13 +151,14 @@ class PowerManager:
                 pass
 
     def _simulate_key_press(self):
-        """模拟无感按键操作 - 按下并释放F15键（不会影响用户操作）"""
+        """模拟无感按键操作 - 使用 Shift 键（不会影响用户操作）"""
         try:
-            # 使用F15键，这是一个很少使用的功能键，不会干扰用户操作
-            self._keyboard.press(Key.f15)
-            time.sleep(0.01)  # 短暂延迟
-            self._keyboard.release(Key.f15)
-            self.logger.debug("模拟按键操作完成 (F15)")
+            # 使用 Shift 键，按下并立即释放，不会产生任何可见效果
+            # 但足以让系统认为有用户活动
+            self._keyboard.press(Key.shift)
+            time.sleep(0.001)  # 1毫秒延迟
+            self._keyboard.release(Key.shift)
+            self.logger.info("模拟按键操作完成 (Shift)")
         except Exception as e:
             self.logger.error(f"模拟按键失败: {e}")
 
