@@ -20,6 +20,9 @@ PowerRequestSystemRequired = 0
 PowerRequestDisplayRequired = 1
 PowerRequestAwayModeRequired = 2
 
+# 鼠标事件常量
+MOUSEEVENTF_MOVE = 0x0001
+
 
 class _ReasonContextReason(ctypes.Union):
     _fields_ = [("SimpleReasonString", ctypes.c_wchar_p)]
@@ -42,7 +45,7 @@ class PowerManager:
         self._power_request_handle = None
         self._keyboard = Controller()
         self._keyboard_simulation_timer = None
-        self._keyboard_simulation_interval = 55  # 每55秒模拟一次按键（比60秒更频繁）
+        self._keyboard_simulation_interval = 30  # 每30秒刷新一次（确保在休眠前刷新）
 
     def _get_set_thread_execution_state(self):
         if not hasattr(ctypes, "windll"):
@@ -153,14 +156,35 @@ class PowerManager:
     def _simulate_key_press(self):
         """模拟无感按键操作 - 使用 Shift 键（不会影响用户操作）"""
         try:
-            # 使用 Shift 键，按下并立即释放，不会产生任何可见效果
-            # 但足以让系统认为有用户活动
+            # 方法1：使用 mouse_event 移动鼠标（最可靠的方法）
+            # 移动鼠标 0 像素（不会真正移动，但会重置空闲计时器）
+            try:
+                if hasattr(ctypes, "windll"):
+                    ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0)
+                    self.logger.debug("已触发鼠标事件（0移动）")
+            except Exception as e:
+                self.logger.debug(f"鼠标事件失败: {e}")
+            
+            # 方法2：使用 SetThreadExecutionState 重置空闲计时器
+            func = self._get_set_thread_execution_state()
+            if func is not None:
+                # ES_SYSTEM_REQUIRED 会重置系统空闲计时器
+                # 不使用 ES_CONTINUOUS，让它只影响一次
+                result = func(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+                self.logger.debug(f"重置空闲计时器 (返回值: {result})")
+            
+            # 方法3：模拟按键（三重保险）
             self._keyboard.press(Key.shift)
             time.sleep(0.001)  # 1毫秒延迟
             self._keyboard.release(Key.shift)
-            self.logger.info("模拟按键操作完成 (Shift)")
+            
+            # 方法4：恢复持续状态
+            if func is not None:
+                func(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+            
+            self.logger.info("防休眠刷新完成 (鼠标事件 + 重置计时器 + 模拟按键 + 恢复状态)")
         except Exception as e:
-            self.logger.error(f"模拟按键失败: {e}")
+            self.logger.error(f"防休眠刷新失败: {e}")
 
     def _cancel_keyboard_simulation(self):
         """取消键盘模拟定时器"""
