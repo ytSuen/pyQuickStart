@@ -42,8 +42,9 @@ class PowerManager:
         LIGHT = "light"      # 轻度：60秒，20像素
         MEDIUM = "medium"    # 中度：30秒，50像素
         HEAVY = "heavy"      # 重度：15秒，100像素
+        CUSTOM = "custom"    # 自定义：120秒，100像素（默认）
     
-    def __init__(self, protection_level="medium"):
+    def __init__(self, protection_level="custom"):
         self.logger = Logger()
         self.is_preventing_sleep = False
         self._keepalive_timer = None
@@ -51,9 +52,9 @@ class PowerManager:
         self._power_request_handle = None
         self._keyboard = Controller()
         self._keyboard_simulation_timer = None
-        self._keyboard_simulation_interval = 30  # 每30秒刷新一次（确保在休眠前刷新）
+        self._keyboard_simulation_interval = 120  # 默认120秒
         self.protection_level = protection_level
-        self._mouse_movement_pixels = 20  # 默认鼠标移动像素
+        self._mouse_movement_pixels = 100  # 默认100像素
         self._update_protection_settings()
         # 锁屏检测相关
         self._lock_count = 0
@@ -66,16 +67,17 @@ class PowerManager:
         settings = {
             "light": (60, 20),
             "medium": (30, 50),
-            "heavy": (15, 100)
+            "heavy": (15, 100),
+            "custom": (120, 100)  # 自定义默认设置
         }
-        interval, pixels = settings.get(self.protection_level, (30, 50))
+        interval, pixels = settings.get(self.protection_level, (120, 100))
         self._keyboard_simulation_interval = interval
         self._mouse_movement_pixels = pixels
         self.logger.debug(f"防护设置已更新: 强度={self.protection_level}, 间隔={interval}秒, 像素={pixels}px")
     
     def set_protection_level(self, level):
         """设置防护强度"""
-        if level not in ["light", "medium", "heavy"]:
+        if level not in ["light", "medium", "heavy", "custom"]:
             self.logger.warning(f"无效的防护强度: {level}，保持当前设置")
             return False
         
@@ -197,7 +199,7 @@ class PowerManager:
                 pass
 
     def _move_mouse(self, pixels):
-        """执行鼠标移动"""
+        """执行鼠标移动 - 使用绝对坐标确保精确回到原位"""
         try:
             if not hasattr(ctypes, "windll"):
                 error_msg = "鼠标移动失败: ctypes.windll不可用 (非Windows平台或ctypes未正确加载)"
@@ -205,14 +207,26 @@ class PowerManager:
                 raise RuntimeError(error_msg)
             
             try:
+                # 定义POINT结构体用于获取鼠标位置
+                class POINT(ctypes.Structure):
+                    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+                
+                # 获取当前鼠标位置
+                point = POINT()
+                ctypes.windll.user32.GetCursorPos(ctypes.byref(point))
+                original_x, original_y = point.x, point.y
+                self.logger.debug(f"鼠标原始位置: ({original_x}, {original_y})")
+                
                 # 向右移动
                 ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, pixels, 0, 0, 0)
                 self.logger.debug(f"鼠标向右移动: {pixels}px")
-                time.sleep(0.01)  # 10毫秒延迟
-                # 向左移回
-                ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, -pixels, 0, 0, 0)
-                self.logger.debug(f"鼠标向左移回: {pixels}px")
-                self.logger.debug(f"鼠标移动完成: {pixels}px往返")
+                time.sleep(0.05)  # 增加到50毫秒，确保移动完成
+                
+                # 使用SetCursorPos精确回到原位
+                ctypes.windll.user32.SetCursorPos(original_x, original_y)
+                self.logger.debug(f"鼠标精确回到原位: ({original_x}, {original_y})")
+                
+                self.logger.debug(f"鼠标移动完成: {pixels}px往返，已回到原位")
             except (OSError, AttributeError, ctypes.ArgumentError) as e:
                 # 捕获ctypes特定异常
                 error_msg = f"鼠标移动失败 (像素: {pixels}px): ctypes API调用错误 - {type(e).__name__}: {e}"

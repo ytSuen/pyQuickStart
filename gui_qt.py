@@ -639,63 +639,31 @@ class HotkeyManagerQt(QMainWindow):
         
         header_layout.addWidget(status_container)
         
-        # 防护强度选择
-        protection_label = QLabel("防护强度:")
-        protection_label.setProperty("role", "fieldLabel")
-        header_layout.addWidget(protection_label)
+        # 防护强度选择 - 隐藏
+        # protection_label = QLabel("防护强度:")
+        # protection_label.setProperty("role", "fieldLabel")
+        # header_layout.addWidget(protection_label)
         
-        self.protection_combo = QComboBox()
-        self.protection_combo.addItems([
-            "轻度 (60秒/20px)",
-            "中度 (30秒/50px)",
-            "重度 (15秒/100px)"
-        ])
-        self.protection_combo.setCurrentIndex(1)  # 默认中度
-        self.protection_combo.setMinimumHeight(44)
-        self.protection_combo.setMinimumWidth(150)
-        self.protection_combo.currentIndexChanged.connect(self.on_protection_level_changed)
-        self.protection_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                padding: 10px 14px;
-                color: #1E293B;
-                font-size: 14px;
-            }
-            QComboBox:hover {
-                border: 1px solid #CBD5E1;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 30px;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #64748B;
-                margin-right: 10px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                selection-background-color: #F8FAFC;
-                selection-color: #1E293B;
-                padding: 4px;
-            }
-        """)
-        header_layout.addWidget(self.protection_combo)
+        # self.protection_combo = QComboBox()
+        # self.protection_combo.addItems([
+        #     "轻度 (60秒/20px)",
+        #     "中度 (30秒/50px)",
+        #     "重度 (15秒/100px)"
+        # ])
+        # self.protection_combo.setCurrentIndex(1)  # 默认中度
+        # self.protection_combo.setMinimumHeight(44)
+        # self.protection_combo.setMinimumWidth(150)
+        # self.protection_combo.currentIndexChanged.connect(self.on_protection_level_changed)
+        # header_layout.addWidget(self.protection_combo)
         
-        # 测试防锁屏按钮
-        test_btn = QPushButton("测试防锁屏")
-        test_btn.clicked.connect(self.test_screen_lock_prevention)
-        test_btn.setMinimumHeight(44)
-        test_btn.setProperty("variant", "soft")
-        test_btn.setProperty("size", "md")
-        test_btn.setToolTip("执行一次防护刷新并显示统计信息")
-        header_layout.addWidget(test_btn)
+        # 测试防锁屏按钮 - 隐藏
+        # test_btn = QPushButton("测试防锁屏")
+        # test_btn.clicked.connect(self.test_screen_lock_prevention)
+        # test_btn.setMinimumHeight(44)
+        # test_btn.setProperty("variant", "soft")
+        # test_btn.setProperty("size", "md")
+        # test_btn.setToolTip("执行一次防护刷新并显示统计信息")
+        # header_layout.addWidget(test_btn)
         
         # 防休眠按钮
         self.sleep_btn = QPushButton("开启防休眠")
@@ -713,16 +681,16 @@ class HotkeyManagerQt(QMainWindow):
         self.start_btn.setProperty("size", "md")
         header_layout.addWidget(self.start_btn)
         
-        # 检查更新按钮（只显示图标，放在右上角）
+        # 检查更新按钮（只显示图标，缩小一倍）
         update_btn = QPushButton("🔄")
         update_btn.clicked.connect(self.check_for_updates)
-        update_btn.setFixedSize(44, 44)  # 固定大小，正方形
+        update_btn.setFixedSize(22, 22)  # 缩小一倍：从44x44改为22x22
         update_btn.setProperty("variant", "soft")
         update_btn.setToolTip(f"检查更新\n当前版本: v{self.updater.get_current_version()}")
         update_btn.setStyleSheet("""
             QPushButton {
-                font-size: 18px;
-                border-radius: 22px;
+                font-size: 9px;
+                border-radius: 11px;
             }
         """)
         header_layout.addWidget(update_btn)
@@ -866,10 +834,10 @@ class HotkeyManagerQt(QMainWindow):
             self.hotkey_manager.add_hotkey(hotkey, path)
             self.add_table_row(hotkey, path)
         
-        # 加载防护强度
+        # 加载防护强度（默认使用custom）
         protection_level = self.config_manager.get_protection_level()
-        level_index = {"light": 0, "medium": 1, "heavy": 2}.get(protection_level, 1)
-        self.protection_combo.setCurrentIndex(level_index)
+        if not protection_level or protection_level not in ["light", "medium", "heavy", "custom"]:
+            protection_level = "custom"  # 默认使用自定义强度
         
         # 应用到PowerManager
         self.power_manager.set_protection_level(protection_level)
