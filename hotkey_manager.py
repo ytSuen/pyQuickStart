@@ -231,6 +231,45 @@ class HotkeyManager:
                         new_processes_found = 1
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
+            else:
+                # 没有找到新进程，可能是浏览器已经在运行，只是打开了新窗口
+                # 尝试找到现有的匹配进程并添加到监控列表
+                self.logger.debug(f"未找到新进程，尝试查找现有的 {program_name} 进程")
+                existing_candidates = []
+                
+                for proc in psutil.process_iter(['name', 'exe', 'create_time', 'pid']):
+                    try:
+                        proc_name = proc.info.get('name', '').lower()
+                        proc_exe = proc.info.get('exe', '')
+                        
+                        # 匹配条件
+                        name_match = (proc_name == program_name or 
+                                     program_name_without_ext in proc_name or
+                                     proc_name.startswith(program_name_without_ext))
+                        path_match = proc_exe and Path(proc_exe).resolve() == normalized_path
+                        
+                        if name_match or path_match:
+                            existing_candidates.append((proc.info['create_time'], proc.pid, proc_name))
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, OSError, AttributeError):
+                        continue
+                
+                if existing_candidates:
+                    # 找到现有进程，选择最早启动的（主进程）
+                    existing_candidates.sort(key=lambda x: x[0])
+                    earliest_pid = existing_candidates[0][1]
+                    earliest_name = existing_candidates[0][2]
+                    
+                    try:
+                        ps_process = psutil.Process(earliest_pid)
+                        if ps_process not in self.running_processes:
+                            self.running_processes.append(ps_process)
+                            self.logger.info(f"已添加到监控列表（现有进程）: {earliest_name} (PID: {earliest_pid}, 主进程)")
+                            new_processes_found = 1
+                        else:
+                            self.logger.debug(f"进程已在监控列表中: {earliest_name} (PID: {earliest_pid})")
+                            new_processes_found = 1  # 虽然没有添加，但进程存在
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
             
             if new_processes_found == 0:
                 self.logger.warning(f"未能找到新启动的进程: {program_name}")
