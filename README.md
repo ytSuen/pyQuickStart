@@ -9,6 +9,9 @@
 
 ## 📸 界面预览
 
+<img width="1102" height="872" alt="b15a26f08139f36570ef1a726213d06c" src="https://github.com/user-attachments/assets/30b7f4d4-aca1-4e58-b3a3-6550eba6d6ca" />
+
+
 现代化的浅色商务风格界面，简洁易用：
 
 - 实时统计卡片（配置快捷键数、运行中程序数、防休眠状态）
