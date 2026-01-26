@@ -2,12 +2,22 @@
 
 一个 Windows 桌面工具，支持自定义全局快捷键快速启动程序、打开网页、访问文件夹，并提供智能防休眠防锁屏功能。
 
+I am not a programmer, this is my first time using a working program written by kiro;
+
+Quickly launch software (shortcut configured);
+
+Prevent screen lock and sleep, keep the computer always on (can be used even with company policy restrictions)
+
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![Version](https://img.shields.io/badge/version-1.3.0-green.svg)
 
 ## 📸 界面预览
+
+<img width="1102" height="872" alt="b15a26f08139f36570ef1a726213d06c" src="https://github.com/user-attachments/assets/30b7f4d4-aca1-4e58-b3a3-6550eba6d6ca" />
+
 
 现代化的浅色商务风格界面，简洁易用：
 
