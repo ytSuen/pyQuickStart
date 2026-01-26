@@ -220,11 +220,12 @@ class PowerManager:
                 # 向右移动
                 ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, pixels, 0, 0, 0)
                 self.logger.debug(f"鼠标向右移动: {pixels}px")
-                time.sleep(0.05)  # 增加到50毫秒，确保移动完成
+                time.sleep(0.15)  # 增加到150毫秒，让系统有足够时间识别为用户活动
                 
-                # 使用SetCursorPos精确回到原位
-                ctypes.windll.user32.SetCursorPos(original_x, original_y)
-                self.logger.debug(f"鼠标精确回到原位: ({original_x}, {original_y})")
+                # 向左移动回原位（使用相对移动而不是绝对定位）
+                ctypes.windll.user32.mouse_event(MOUSEEVENTF_MOVE, -pixels, 0, 0, 0)
+                self.logger.debug(f"鼠标向左移动回原位: {pixels}px")
+                time.sleep(0.05)
                 
                 self.logger.debug(f"鼠标移动完成: {pixels}px往返，已回到原位")
             except (OSError, AttributeError, ctypes.ArgumentError) as e:
@@ -253,11 +254,20 @@ class PowerManager:
             return None
     
     def _simulate_keyboard(self):
-        """模拟按键"""
-        self._keyboard.press(Key.shift)
-        time.sleep(0.001)
-        self._keyboard.release(Key.shift)
-        self.logger.debug("模拟按键完成: Shift")
+        """模拟按键 - 使用F15键（不会影响用户操作）"""
+        try:
+            # F15键通常不会被应用程序使用，是防止休眠的理想选择
+            self._keyboard.press(Key.f15)
+            time.sleep(0.05)  # 增加按键持续时间到50毫秒
+            self._keyboard.release(Key.f15)
+            self.logger.debug("模拟按键完成: F15")
+        except Exception as e:
+            # 如果F15失败，降级使用Shift
+            self.logger.warning(f"F15按键失败，降级使用Shift: {e}")
+            self._keyboard.press(Key.shift)
+            time.sleep(0.05)
+            self._keyboard.release(Key.shift)
+            self.logger.debug("模拟按键完成: Shift (降级)")
     
     def _restore_continuous_state(self):
         """恢复持续状态"""
@@ -284,32 +294,32 @@ class PowerManager:
         }
         
         try:
-            # 方法1：使用 mouse_event 移动鼠标（增大移动范围，规避锁屏）
+            # 方法1：模拟按键（优先级提高，因为按键更可靠）
+            self.logger.debug(f"步骤1: 模拟按键")
+            try:
+                self._simulate_keyboard()
+                methods_success["simulate_keyboard"] = True
+            except Exception as e:
+                self.logger.warning(f"步骤1: 模拟按键失败: {e}")
+            
+            # 方法2：使用 mouse_event 移动鼠标（增大移动范围，规避锁屏）
             pixels = self._mouse_movement_pixels
-            self.logger.debug(f"步骤1: 执行鼠标移动 ({pixels}px)")
+            self.logger.debug(f"步骤2: 执行鼠标移动 ({pixels}px)")
             try:
                 self._move_mouse(pixels)
-                self.logger.debug(f"步骤1: 鼠标移动成功")
+                self.logger.debug(f"步骤2: 鼠标移动成功")
                 methods_success["mouse_movement"] = True
             except Exception as e:
-                self.logger.warning(f"步骤1: 鼠标移动失败，降级到其他方法: {e}")
+                self.logger.warning(f"步骤2: 鼠标移动失败，降级到其他方法: {e}")
             
-            # 方法2：使用 SetThreadExecutionState 重置空闲计时器
-            self.logger.debug(f"步骤2: 重置空闲计时器")
+            # 方法3：使用 SetThreadExecutionState 重置空闲计时器
+            self.logger.debug(f"步骤3: 重置空闲计时器")
             try:
                 result = self._reset_idle_timer()
                 if result:
                     methods_success["reset_idle_timer"] = True
             except Exception as e:
-                self.logger.warning(f"步骤2: 重置空闲计时器失败: {e}")
-            
-            # 方法3：模拟按键（三重保险）
-            self.logger.debug(f"步骤3: 模拟按键")
-            try:
-                self._simulate_keyboard()
-                methods_success["simulate_keyboard"] = True
-            except Exception as e:
-                self.logger.warning(f"步骤3: 模拟按键失败: {e}")
+                self.logger.warning(f"步骤3: 重置空闲计时器失败: {e}")
             
             # 方法4：恢复持续状态
             self.logger.debug(f"步骤4: 恢复持续状态")
