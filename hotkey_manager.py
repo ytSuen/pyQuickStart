@@ -170,34 +170,56 @@ class HotkeyManager:
                 self.logger.error(f"目标不存在: {target_path}")
                 return
             
+            # 记录启动前的进程快照
+            before_pids = set(p.pid for p in psutil.process_iter())
+            
             # 直接启动程序
             import os
             os.startfile(target_path)
             self.logger.info(f"启动程序: {target_path}")
             
             # 等待进程启动
-            time.sleep(1.0)
+            time.sleep(1.5)
             
             # 尝试找到新启动的进程并添加到监控列表
             normalized_path = path.resolve()
             program_name = normalized_path.name.lower()
+            program_name_without_ext = normalized_path.stem.lower()
             
-            for proc in psutil.process_iter(['name', 'exe', 'create_time']):
+            # 查找新启动的进程
+            new_processes_found = 0
+            for proc in psutil.process_iter(['name', 'exe', 'create_time', 'pid']):
                 try:
+                    # 跳过启动前就存在的进程
+                    if proc.pid in before_pids:
+                        continue
+                    
                     # 检查进程名称或完整路径
                     proc_name = proc.info.get('name', '').lower()
                     proc_exe = proc.info.get('exe', '')
                     
-                    if proc_name == program_name or (proc_exe and Path(proc_exe).resolve() == normalized_path):
-                        # 检查进程是否是最近启动的（10秒内）
-                        if time.time() - proc.create_time() < 10:
+                    # 匹配条件：
+                    # 1. 进程名完全匹配
+                    # 2. 进程路径匹配
+                    # 3. 进程名包含程序名（不含扩展名）- 用于 Chrome/Edge 等
+                    name_match = (proc_name == program_name or 
+                                 program_name_without_ext in proc_name or
+                                 proc_name.startswith(program_name_without_ext))
+                    path_match = proc_exe and Path(proc_exe).resolve() == normalized_path
+                    
+                    if name_match or path_match:
+                        # 检查进程是否是最近启动的（15秒内）
+                        if time.time() - proc.create_time() < 15:
                             ps_process = psutil.Process(proc.pid)
                             if ps_process not in self.running_processes:
                                 self.running_processes.append(ps_process)
-                                self.logger.info(f"已添加到监控列表: {program_name} (PID: {proc.pid})")
-                            break
+                                self.logger.info(f"已添加到监控列表: {proc_name} (PID: {proc.pid})")
+                                new_processes_found += 1
                 except (psutil.NoSuchProcess, psutil.AccessDenied, OSError, AttributeError):
                     continue
+            
+            if new_processes_found == 0:
+                self.logger.warning(f"未能找到新启动的进程: {program_name}")
 
         except Exception as e:
             self.logger.error(f"启动失败: {e}")
