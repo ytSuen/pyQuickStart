@@ -188,7 +188,7 @@ class HotkeyManager:
             
             # 查找新启动的进程
             new_processes_found = 0
-            main_process_added = False  # 标记是否已添加主进程
+            candidate_processes = []  # 候选进程列表
             
             for proc in psutil.process_iter(['name', 'exe', 'create_time', 'pid', 'ppid']):
                 try:
@@ -212,31 +212,25 @@ class HotkeyManager:
                     if name_match or path_match:
                         # 检查进程是否是最近启动的（15秒内）
                         if time.time() - proc.create_time() < 15:
-                            ps_process = psutil.Process(proc.pid)
-                            
-                            # 对于多进程浏览器（Chrome/Edge），只添加主进程
-                            # 主进程特征：没有父进程或父进程不是同名进程
-                            is_main_process = True
-                            if program_name_without_ext in ['chrome', 'msedge', 'firefox', 'opera', 'brave']:
-                                try:
-                                    parent = ps_process.parent()
-                                    if parent and parent.name().lower().startswith(program_name_without_ext):
-                                        # 这是子进程，跳过
-                                        is_main_process = False
-                                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                                    pass
-                            
-                            # 只添加主进程，避免重复统计
-                            if is_main_process and ps_process not in self.running_processes:
-                                self.running_processes.append(ps_process)
-                                self.logger.info(f"已添加到监控列表: {proc_name} (PID: {proc.pid})")
-                                new_processes_found += 1
-                                main_process_added = True
-                                # 对于浏览器，找到主进程后就停止搜索
-                                if program_name_without_ext in ['chrome', 'msedge', 'firefox', 'opera', 'brave']:
-                                    break
+                            candidate_processes.append((proc.info['create_time'], proc.pid, proc_name))
                 except (psutil.NoSuchProcess, psutil.AccessDenied, OSError, AttributeError):
                     continue
+            
+            # 对于多进程程序（浏览器等），只添加最早启动的进程（主进程）
+            if candidate_processes:
+                # 按创建时间排序，取最早的那个
+                candidate_processes.sort(key=lambda x: x[0])
+                earliest_pid = candidate_processes[0][1]
+                earliest_name = candidate_processes[0][2]
+                
+                try:
+                    ps_process = psutil.Process(earliest_pid)
+                    if ps_process not in self.running_processes:
+                        self.running_processes.append(ps_process)
+                        self.logger.info(f"已添加到监控列表: {earliest_name} (PID: {earliest_pid}, 主进程)")
+                        new_processes_found = 1
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
             
             if new_processes_found == 0:
                 self.logger.warning(f"未能找到新启动的进程: {program_name}")
