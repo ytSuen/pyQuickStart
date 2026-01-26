@@ -12,7 +12,7 @@ Prevent screen lock and sleep, keep the computer always on (can be used even wit
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
-![Version](https://img.shields.io/badge/version-1.3.0-green.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-green.svg)
 
 ## 📸 界面预览
 
