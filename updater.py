@@ -46,8 +46,9 @@ class Updater:
     def _get_version_file_path(self) -> Path:
         """获取版本文件路径"""
         if getattr(sys, 'frozen', False):
-            # 打包后，version.json 应该在exe同目录
-            return Path(sys.executable).parent / 'version.json'
+            # 打包后，version.json 在 _MEIPASS 临时目录中
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+            return Path(base_path) / 'version.json'
         else:
             # 开发环境
             return Path(__file__).parent / 'version.json'
