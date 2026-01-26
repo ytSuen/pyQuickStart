@@ -2,7 +2,7 @@
 
 一个 Windows 桌面工具，支持自定义全局快捷键快速启动程序、打开网页、访问文件夹，并提供智能防休眠防锁屏功能。
 
-I am not a programmer, this is my first time using a working program written by kiro;
+Not a programmer, this is my first time using a working program written by kiro;
 
 Quickly launch software (shortcut configured);
 
