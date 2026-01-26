@@ -188,7 +188,9 @@ class HotkeyManager:
             
             # 查找新启动的进程
             new_processes_found = 0
-            for proc in psutil.process_iter(['name', 'exe', 'create_time', 'pid']):
+            main_process_added = False  # 标记是否已添加主进程
+            
+            for proc in psutil.process_iter(['name', 'exe', 'create_time', 'pid', 'ppid']):
                 try:
                     # 跳过启动前就存在的进程
                     if proc.pid in before_pids:
@@ -211,10 +213,28 @@ class HotkeyManager:
                         # 检查进程是否是最近启动的（15秒内）
                         if time.time() - proc.create_time() < 15:
                             ps_process = psutil.Process(proc.pid)
-                            if ps_process not in self.running_processes:
+                            
+                            # 对于多进程浏览器（Chrome/Edge），只添加主进程
+                            # 主进程特征：没有父进程或父进程不是同名进程
+                            is_main_process = True
+                            if program_name_without_ext in ['chrome', 'msedge', 'firefox', 'opera', 'brave']:
+                                try:
+                                    parent = ps_process.parent()
+                                    if parent and parent.name().lower().startswith(program_name_without_ext):
+                                        # 这是子进程，跳过
+                                        is_main_process = False
+                                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                    pass
+                            
+                            # 只添加主进程，避免重复统计
+                            if is_main_process and ps_process not in self.running_processes:
                                 self.running_processes.append(ps_process)
                                 self.logger.info(f"已添加到监控列表: {proc_name} (PID: {proc.pid})")
                                 new_processes_found += 1
+                                main_process_added = True
+                                # 对于浏览器，找到主进程后就停止搜索
+                                if program_name_without_ext in ['chrome', 'msedge', 'firefox', 'opera', 'brave']:
+                                    break
                 except (psutil.NoSuchProcess, psutil.AccessDenied, OSError, AttributeError):
                     continue
             
