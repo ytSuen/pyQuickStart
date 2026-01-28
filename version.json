@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0",
-  "build_date": "2026-01-23",
-  "description": "重大更新：快捷键大写加粗显示，优化发布者信息展示，修复版本检查显示问题",
-  "changelog": "重大更新：快捷键大写加粗显示，优化发布者信息展示，修复版本检查显示问题",
-  "download_url": "https://gitee.com/sytao_2020/pyQuickStart/releases/download/v2.0.0/pyQuickStart.exe"
+  "version": "2.0.1",
+  "build_date": "2026-01-28",
+  "description": "优化防锁屏功能和日志管理系统",
+  "changelog": "v2.0.1 更新内容：\n1. 优化防锁屏功能：改进鼠标移动策略，使用F15键替代Shift键，提高防护可靠性\n2. 修复运行中程序计数错误：只统计主进程，支持浏览器已运行时的进程检测\n3. 优化日志管理：新命名格式(pyQuickStart_yyyymmdd.log)，自动日期切换，保留7天日志\n4. 修复日志切换bug：确保日期变更后只写入新日志文件\n5. 添加应用图标：使用自定义图标打包",
+  "download_url": "https://gitee.com/sytao_2020/pyQuickStart/releases/download/v2.0.1/pyQuickStart.exe"
 }
