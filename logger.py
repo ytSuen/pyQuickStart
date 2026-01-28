@@ -31,18 +31,27 @@ class Logger:
         # 使用新的命名格式: pyQuickStart_yyyymmdd.log
         log_file = log_dir / f"pyQuickStart_{datetime.now().strftime('%Y%m%d')}.log"
 
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s [%(levelname)s] %(message)s',
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
-        )
+        # 创建logger实例（不使用basicConfig，手动配置）
+        self.logger = logging.getLogger('pyQuickStart')
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False  # 不传播到root logger
+        
+        # 创建格式化器
+        formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+        
+        # 添加文件处理器
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
+        
+        # 添加控制台处理器
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
 
-        self.logger = logging.getLogger(__name__)
         self.current_date = datetime.now().date()
         self.log_file = log_file
+        self.file_handler = file_handler  # 保存文件处理器引用
 
     def _cleanup_old_logs(self, log_dir: Path, days: int = 7):
         """清理指定天数之前的日志文件"""
@@ -81,19 +90,22 @@ class Logger:
             log_dir = Path("logs")
             new_log_file = log_dir / f"pyQuickStart_{current_date.strftime('%Y%m%d')}.log"
             
-            # 移除旧的文件处理器
-            for handler in self.logger.handlers[:]:
-                if isinstance(handler, logging.FileHandler):
-                    handler.close()
-                    self.logger.removeHandler(handler)
+            # 关闭并移除旧的文件处理器
+            if hasattr(self, 'file_handler') and self.file_handler:
+                self.file_handler.close()
+                self.logger.removeHandler(self.file_handler)
             
-            # 添加新的文件处理器
-            new_handler = logging.FileHandler(new_log_file, encoding='utf-8')
-            new_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
-            self.logger.addHandler(new_handler)
+            # 创建并添加新的文件处理器
+            formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+            new_file_handler = logging.FileHandler(new_log_file, encoding='utf-8')
+            new_file_handler.setFormatter(formatter)
+            self.logger.addHandler(new_file_handler)
             
+            # 更新状态
             self.current_date = current_date
             self.log_file = new_log_file
+            self.file_handler = new_file_handler
+            
             self.logger.info(f"日志文件已切换到: {new_log_file.name}")
             
             # 清理旧日志
