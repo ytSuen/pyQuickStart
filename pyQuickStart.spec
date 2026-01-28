@@ -6,7 +6,17 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('resources\\SYT.png', 'resources'), ('version.json', '.')],
-    hiddenimports=['pynput', 'pynput.keyboard', 'pynput.keyboard._win32', 'requests'],
+    hiddenimports=[
+        'pynput', 
+        'pynput.keyboard', 
+        'pynput.keyboard._win32', 
+        'requests',
+        'PyQt5',
+        'PyQt5.QtCore',
+        'PyQt5.QtGui',
+        'PyQt5.QtWidgets',
+        'PyQt5.sip'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
